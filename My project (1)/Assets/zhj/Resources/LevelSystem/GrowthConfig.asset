@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 607cf9d2a71c5704f8b4466f61244306, type: 3}
+  m_Name: GrowthConfig
+  m_EditorClassIdentifier: 
+  defaultGrowth:
+    baseHealth: 100
+    healthPerLevel: 20
+    baseAttack: 10
+    attackPerLevel: 2
+    baseDefense: 5
+    defensePerLevel: 1
+    baseStamina: 50
+    staminaPerLevel: 5
+  classGrowths:
+  - className: Warrior
+    attributes:
+      baseHealth: 100
+      healthPerLevel: 20
+      baseAttack: 10
+      attackPerLevel: 2
+      baseDefense: 5
+      defensePerLevel: 1
+      baseStamina: 50
+      staminaPerLevel: 5
+    healthGrowthTier: 2
+    attackGrowthTier: 2
+    defenseGrowthTier: 2
+  - className: Warrior
+    attributes:
+      baseHealth: 100
+      healthPerLevel: 20
+      baseAttack: 10
+      attackPerLevel: 2
+      baseDefense: 5
+      defensePerLevel: 1
+      baseStamina: 50
+      staminaPerLevel: 5
+    healthGrowthTier: 2
+    attackGrowthTier: 2
+    defenseGrowthTier: 2
+  - className: Warrior
+    attributes:
+      baseHealth: 100
+      healthPerLevel: 20
+      baseAttack: 10
+      attackPerLevel: 2
+      baseDefense: 5
+      defensePerLevel: 1
+      baseStamina: 50
+      staminaPerLevel: 5
+    healthGrowthTier: 2
+    attackGrowthTier: 2
+    defenseGrowthTier: 2
+  easyMultiplier: 0.8
+  normalMultiplier: 1
+  hardMultiplier: 1.2
+  nightmareMultiplier: 1.5
+  enableLevelCap: 1
+  softLevelCap: 50
+  hardLevelCap: 100
+  postSoftCapMultiplier: 3
