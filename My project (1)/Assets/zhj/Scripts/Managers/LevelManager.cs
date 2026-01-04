@@ -44,22 +44,78 @@ public class LevelManager : MonoBehaviour
     private LevelUpUI levelUpUI;
     
     private void Awake()
+{
+    if (Instance == null)
     {
-        if (Instance == null)
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
+    else
+    {
+        Destroy(gameObject);
+    }
+    
+    // 自动加载资源
+    LoadResources();
+    
+    InitializeAttributes();
+    
+    // 尝试查找LevelUpUI
+    FindLevelUpUI();
+}
+
+/// <summary>
+/// 加载资源
+/// </summary>
+private void LoadResources()
+{
+    // 加载LevelData
+    if (levelData == null)
+    {
+        levelData = Resources.Load<LevelDataSO>("LevelSystem/LevelData");
+        if (levelData == null)
         {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
+            Debug.LogError("无法从Resources/LevelSystem/加载LevelData.asset");
+            CreateDefaultLevelData();
         }
         else
         {
-            Destroy(gameObject);
+            Debug.Log("已加载LevelData");
         }
-        
-        InitializeAttributes();
-        
-        // 尝试查找LevelUpUI
-        FindLevelUpUI();
     }
+    
+    // 加载GrowthConfig
+    if (growthConfig == null)
+    {
+        growthConfig = Resources.Load<GrowthConfigSO>("LevelSystem/GrowthConfig");
+        if (growthConfig == null)
+        {
+            Debug.LogWarning("无法加载GrowthConfig，使用默认值");
+        }
+    }
+}
+
+/// <summary>
+/// 创建默认的LevelData
+/// </summary>
+private void CreateDefaultLevelData()
+{
+    levelData = ScriptableObject.CreateInstance<LevelDataSO>();
+    
+    // 设置默认值
+    levelData.maxLevel = 100;
+    levelData.baseExperience = 100;
+    levelData.experienceMultiplier = 1.5f;
+    
+    // 生成等级数据
+    var method = levelData.GetType().GetMethod("GenerateLevelData");
+    if (method != null)
+    {
+        method.Invoke(levelData, null);
+    }
+    
+    Debug.Log("已创建默认LevelData配置");
+}
     
     /// <summary>
     /// 查找LevelUpUI

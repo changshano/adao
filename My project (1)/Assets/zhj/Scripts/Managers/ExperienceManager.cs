@@ -157,23 +157,70 @@ private void CreateDefaultExperienceData()
     /// 检查是否达到升级条件
     /// </summary>
     private void CheckForLevelUp()
+{
+    if (LevelManager.Instance == null)
     {
-        if (currentExperience >= experienceToNextLevel)
-        {
-            // 升级逻辑在LevelManager中处理
-            LevelManager.Instance?.LevelUp();
-            
-            // 计算剩余经验
-            int overflowExp = currentExperience - experienceToNextLevel;
-            currentExperience = overflowExp;
-            
-            // 更新下一级所需经验
-            experienceToNextLevel = LevelManager.Instance?.GetExpToNextLevel() ?? experienceToNextLevel * 2;
-            
-            onExperienceChanged?.Invoke(currentExperience, experienceToNextLevel);
-        }
+        Debug.LogError("LevelManager 未找到，无法检查升级");
+        return;
     }
     
+    // 循环升级，直到经验不足
+    while (currentExperience >= experienceToNextLevel && LevelManager.Instance.GetCurrentLevel() < (LevelManager.Instance.GetCurrentLevel() + 10))
+    {
+        // 计算溢出经验
+        int overflowExp = currentExperience - experienceToNextLevel;
+        
+        // 升级
+        LevelManager.Instance.LevelUp();
+        
+        // 更新当前经验为溢出经验
+        currentExperience = overflowExp;
+        
+        // 获取新的下一级所需经验
+        int newExpToNext = LevelManager.Instance.GetExpToNextLevel();
+        
+        // 确保新经验值有效
+        if (newExpToNext > 0)
+        {
+            experienceToNextLevel = newExpToNext;
+        }
+        else
+        {
+            // 如果获取失败，使用默认增长
+            experienceToNextLevel = Mathf.RoundToInt(experienceToNextLevel * 1.5f);
+        }
+        
+        Debug.Log($"升级完成！当前经验: {currentExperience}/{experienceToNextLevel}，溢出经验: {overflowExp}");
+        
+        // 触发事件更新UI
+        onExperienceChanged?.Invoke(currentExperience, experienceToNextLevel);
+        
+        // 如果溢出经验不足以再次升级，退出循环
+        if (overflowExp < experienceToNextLevel)
+        {
+            break;
+        }
+    }
+}
+[ContextMenu("重置经验条")]
+public void ResetExperienceBar()
+{
+    currentExperience = 0;
+    experienceToNextLevel = 100;
+    
+    onExperienceChanged?.Invoke(currentExperience, experienceToNextLevel);
+    
+    Debug.Log("经验条已重置");
+}
+    public void SetExperience(int currentExp, int expToNextLevel)
+    {
+        currentExperience = currentExp;
+        experienceToNextLevel = expToNextLevel;
+        
+        onExperienceChanged?.Invoke(currentExperience, experienceToNextLevel);
+        
+        Debug.Log($"设置经验: {currentExperience}/{experienceToNextLevel}");
+    }
     /// <summary>
     /// 获取当前经验进度
     /// </summary>
@@ -182,7 +229,15 @@ private void CreateDefaultExperienceData()
         if (experienceToNextLevel <= 0) return 0f;
         return Mathf.Clamp01((float)currentExperience / experienceToNextLevel);
     }
-    
+    /// <summary>
+    /// 手动触发升级检查（用于调试）
+    /// </summary>
+    [ContextMenu("手动检查升级")]
+    public void ManualCheckForLevelUp()
+    {
+        Debug.Log($"手动检查升级: 当前经验{currentExperience}/{experienceToNextLevel}");
+        CheckForLevelUp();
+    }
     /// <summary>
     /// 获取当前经验值
     /// </summary>
