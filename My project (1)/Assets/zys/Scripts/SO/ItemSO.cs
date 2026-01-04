@@ -30,5 +30,6 @@ public class ItemProperty
 public enum ItemPropertyType
 {
     HPValue,
+    DefenseValue,
     AttackValue
 }
