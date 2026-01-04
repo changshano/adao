@@ -23,22 +23,65 @@ public class ExperienceManager : MonoBehaviour
     public static ExperienceManager Instance { get; private set; }
     
     private void Awake()
+{
+    if (Instance == null)
     {
-        if (Instance == null)
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
+    else
+    {
+        Destroy(gameObject);
+    }
+    
+    // 自动加载资源
+    LoadResources();
+}
+
+/// <summary>
+/// 自动加载所需资源
+/// </summary>
+private void LoadResources()
+{
+    // 尝试从Resources加载ExperienceData
+    if (experienceData == null)
+    {
+        experienceData = Resources.Load<ExperienceDataSO>("LevelSystem/ExperienceData");
+        if (experienceData == null)
         {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
+            Debug.LogWarning("从Resources加载ExperienceData失败，创建默认配置");
+            CreateDefaultExperienceData();
         }
         else
         {
-            Destroy(gameObject);
-        }
-        
-        if (experienceData == null)
-        {
-            Debug.LogError("ExperienceDataSO is not assigned!");
+            Debug.Log("从Resources加载ExperienceData成功");
         }
     }
+    
+    // 尝试加载GrowthConfig
+    if (growthConfig == null)
+    {
+        growthConfig = Resources.Load<GrowthConfigSO>("LevelSystem/GrowthConfig");
+        if (growthConfig == null)
+        {
+            Debug.LogWarning("从Resources加载GrowthConfig失败");
+        }
+    }
+}
+
+/// <summary>
+/// 创建默认的ExperienceData
+/// </summary>
+private void CreateDefaultExperienceData()
+{
+    experienceData = ScriptableObject.CreateInstance<ExperienceDataSO>();
+    
+    // 设置默认值
+    experienceData.perMemberBonus = 0.1f;
+    experienceData.maxPartySize = 4;
+    
+    Debug.Log("已创建默认ExperienceData配置");
+}
     
     /// <summary>
     /// 初始化经验管理器

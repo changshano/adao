@@ -39,27 +39,42 @@ public class LevelUpUI : MonoBehaviour
     private int attributePointsReward = 3;
     
     private void Awake()
+{
+    // 获取或添加组件
+    canvasGroup = levelUpPanel.GetComponent<CanvasGroup>();
+    if (canvasGroup == null)
     {
-        // 获取或添加组件
-        canvasGroup = levelUpPanel.GetComponent<CanvasGroup>();
-        if (canvasGroup == null)
-        {
-            canvasGroup = levelUpPanel.AddComponent<CanvasGroup>();
-        }
-        
-        audioSource = GetComponent<AudioSource>();
-        if (audioSource == null)
-        {
-            audioSource = gameObject.AddComponent<AudioSource>();
-        }
-        
-        // 初始隐藏
-        levelUpPanel.SetActive(false);
-        attributeUpgradePanel.SetActive(false);
-        
-        // 绑定按钮事件
-        InitializeButtons();
+        canvasGroup = levelUpPanel.AddComponent<CanvasGroup>();
     }
+    
+    audioSource = GetComponent<AudioSource>();
+    if (audioSource == null)
+    {
+        audioSource = gameObject.AddComponent<AudioSource>();
+    }
+    
+    // 初始隐藏 - 添加空值检查
+    if (levelUpPanel != null)
+    {
+        levelUpPanel.SetActive(false);
+    }
+    else
+    {
+        Debug.LogError("levelUpPanel 未设置！请检查Inspector中的引用。");
+    }
+    
+    if (attributeUpgradePanel != null)
+    {
+        attributeUpgradePanel.SetActive(false);
+    }
+    else
+    {
+        Debug.LogWarning("attributeUpgradePanel 未设置，属性升级功能将不可用。");
+    }
+    
+    // 绑定按钮事件
+    InitializeButtons();
+}
     
     private void InitializeButtons()
     {
