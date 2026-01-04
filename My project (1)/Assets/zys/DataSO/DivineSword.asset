@@ -12,9 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b71a2cbbfa15d604f815525d184183b1, type: 3}
   m_Name: DivineSword
   m_EditorClassIdentifier: 
-  name: 
+  name: "\u795E\u5251"
   itemType: 0
-  description: 
-  propertyList: []
-  icon: {fileID: 0}
+  description: "\u795E\u5251"
+  propertyList:
+  - propertyType: 2
+    value: 250
+  icon: {fileID: 2084996774, guid: 6eb16e372762d6b4cb708c44ebfab931, type: 3}
   prefab: {fileID: 0}

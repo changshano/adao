@@ -12,9 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b71a2cbbfa15d604f815525d184183b1, type: 3}
   m_Name: RareSword
   m_EditorClassIdentifier: 
-  name: 
+  name: "\u7A00\u6709\u7684\u5251"
   itemType: 0
-  description: 
-  propertyList: []
-  icon: {fileID: 0}
+  description: "\u7A00\u6709\u7684\u5251"
+  propertyList:
+  - propertyType: 2
+    value: 50
+  icon: {fileID: -1259760662, guid: 6eb16e372762d6b4cb708c44ebfab931, type: 3}
   prefab: {fileID: 0}
