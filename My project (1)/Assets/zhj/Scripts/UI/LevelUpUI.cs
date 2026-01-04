@@ -173,12 +173,12 @@ public class LevelUpUI : MonoBehaviour
         UpdateAttributeValues();
         
         // 如果有属性点，显示属性升级面板
-        if (attributePointsReward > 0 && attributeUpgradePanel != null)
-        {
-            yield return new WaitForSeconds(0.5f);
-            attributeUpgradePanel.SetActive(true);
-            UpdateAttributePointsDisplay(attributePointsReward);
-        }
+        //if (attributePointsReward > 0 && attributeUpgradePanel != null)
+        //{
+           // yield return new WaitForSeconds(0.5f);
+           // attributeUpgradePanel.SetActive(true);
+            //UpdateAttributePointsDisplay(attributePointsReward);
+        //}
         
         // 暂停游戏
         Time.timeScale = 0f;
