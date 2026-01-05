@@ -75,6 +75,7 @@ public class InventoryUI : MonoBehaviour
         Destroy(itemUI.gameObject);
         InventoryManager.Instance.RemoveItem(itemSO);
 
+
         // GameObject.FindGameObjectWithTag(Tag.PLAYER).GetComponent<Player>().UseItem(itemSO);
     }
 
