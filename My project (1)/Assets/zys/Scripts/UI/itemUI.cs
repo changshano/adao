@@ -10,7 +10,7 @@ public class ItemUI : MonoBehaviour
     public TextMeshProUGUI nameText;
     public TextMeshProUGUI typeText;
 
-    private ItemSO itemSO;
+    public ItemSO itemSO;
 
     // 初始化item（更新item）
     public void InitItem(ItemSO itemSO)
@@ -31,5 +31,10 @@ public class ItemUI : MonoBehaviour
         typeText.text = type;
         this.itemSO = itemSO;
 
+    }
+
+    public void OnClick()
+    {
+        InventoryUI.Instance.OnItemClick(itemSO, this);
     }
 }
