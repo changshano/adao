@@ -6,7 +6,7 @@ using UnityEngine;
 [CreateAssetMenu()]
 public class ItemSO : ScriptableObject
 {
-    public string name;
+    public new string name;
     public ItemType itemType;
     public string description;
     public List<ItemProperty> propertyList;
