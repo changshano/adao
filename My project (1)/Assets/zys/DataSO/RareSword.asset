@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b71a2cbbfa15d604f815525d184183b1, type: 3}
   m_Name: RareSword
   m_EditorClassIdentifier: 
+  id: 4
   name: "\u7A00\u6709\u7684\u5251"
   itemType: 0
   description: "\u7A00\u6709\u7684\u5251"

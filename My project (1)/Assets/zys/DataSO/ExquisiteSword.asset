@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b71a2cbbfa15d604f815525d184183b1, type: 3}
   m_Name: ExquisiteSword
   m_EditorClassIdentifier: 
+  id: 3
   name: "\u7CBE\u81F4\u7684\u5251"
   itemType: 0
   description: "\u7CBE\u81F4\u7684\u5251"

@@ -64,19 +64,23 @@ public class InventoryUI : MonoBehaviour
 
         itemUI.InitItem(itemSO);
     }
-
     
     public void OnItemClick(ItemSO itemSO, ItemUI itemUI)
     {
         itemDetailUI.UpdateItemDetailUI(itemSO, itemUI);
     }
-/*
+
     public void OnItemUse(ItemSO itemSO, ItemUI itemUI)
     {
         Destroy(itemUI.gameObject);
         InventoryManager.Instance.RemoveItem(itemSO);
 
-        GameObject.FindGameObjectWithTag(Tag.PLAYER).GetComponent<Player>().UseItem(itemSO);
+        // GameObject.FindGameObjectWithTag(Tag.PLAYER).GetComponent<Player>().UseItem(itemSO);
     }
-    */
+
+    public void OnItemDiscard(ItemSO itemSO, ItemUI itemUI)
+    {
+        Destroy(itemUI.gameObject);
+        InventoryManager.Instance.RemoveItem(itemSO);
+    }
 }
