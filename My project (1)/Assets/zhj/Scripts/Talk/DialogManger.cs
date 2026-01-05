@@ -1,723 +1,347 @@
-// DiaLogmanager.cs (修复版)
 using System.Collections;
+
 using System.Collections.Generic;
+
 using UnityEngine;
+
 using TMPro;
+
 using UnityEngine.UI;
 
+
+
 public class DiaLogmanager : MonoBehaviour
+
 {
-    /// <summary>
-    /// 对话内容文本，csv格式
-    /// </summary> 
-    public TextAsset dialogDataFile;
 
-    /// <summary>
-    /// 左侧角色图像
-    /// </summary>
-    public SpriteRenderer spriteLeft;
-    
-    /// <summary>
-    /// 右侧角色图像
-    /// </summary>
-    public SpriteRenderer spriteRight;
+  /// <summary>
 
-    /// <summary>
-    /// 角色名字文本
-    /// </summary>
-    public TMP_Text nameText;
+  /// 对话内容文本，csv格式
 
-    /// <summary>
-    /// 对话内容文本
-    /// </summary>
-    public TMP_Text dialogText;
+  /// </summary> 
 
-    /// <summary>
-    /// 角色图片列表
-    /// </summary>
-    public List<Sprite> sprites = new List<Sprite>();
+  public TextAsset dialogDataFile;
 
-    /// <summary>
-    /// 角色名字对应图片的字典
-    /// </summary>
-    private Dictionary<string, Sprite> imageDic = new Dictionary<string, Sprite>();
-    
-    /// <summary>
-    /// 当前对话索引值
-    /// </summary>
-    public int dialogIndex = 0;
-    
-    /// <summary>
-    /// 对话文本按行分割
-    /// </summary>
-    public string[] dialogRows;
-    
-    /// <summary>
-    /// 继续按钮
-    /// </summary>
-    public Button nextButton;
 
-    /// <summary>
-    /// 选项按钮预制体
-    /// </summary>
-    public GameObject optionButton;
-    
-    /// <summary>
-    /// 选项按钮父节点
-    /// </summary>
-    public Transform buttonGroup;
-    
-    /// <summary>
-    /// 对话面板
-    /// </summary>
-    public GameObject dialogPanel;
-    
-    /// <summary>
-    /// 调试模式
-    /// </summary>
-    [SerializeField] private bool debugMode = true;
-    
-    /// <summary>
-    /// 是否正在显示对话
-    /// </summary>
-    private bool isShowingDialog = false;
-    
-    /// <summary>
-    /// 对话是否结束
-    /// </summary>
-    private bool isDialogEnded = false;
 
-    #region Unity生命周期
-    private void Awake()
-    {
-        // 安全初始化
-        SafeInitialize();
-    }
-    
-    private void Start()
-    {
-        if (debugMode)
-        {
-            Debug.Log($"[对话管理器] Awake完成，开始初始化");
-        }
-        
-        // 确保UI状态正确
-        InitializeUI();
-        
-        // 如果已经有对话数据，开始对话
-        if (dialogDataFile != null)
-        {
-            StartDialog();
-        }
-    }
-    #endregion
+  /// <summary>
 
-    #region 初始化
-    /// <summary>
-    /// 安全初始化
-    /// </summary>
-    private void SafeInitialize()
-    {
-        try
-        {
-            // 初始化字典
-            InitializeImageDictionary();
-            
-            // 确保组件引用
-            EnsureComponentReferences();
-            
-            if (debugMode)
-            {
-                Debug.Log($"[对话管理器] 安全初始化完成");
-            }
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogError($"[对话管理器] 初始化失败: {e.Message}");
-            Debug.LogError($"[对话管理器] 堆栈: {e.StackTrace}");
-        }
-    }
-    
-    /// <summary>
-    /// 初始化图片字典
-    /// </summary>
-    private void InitializeImageDictionary()
-    {
-        try
-        {
-            // 清空字典
-            imageDic.Clear();
-            
-            // 确保有足够的sprite
-            if (sprites.Count >= 2)
-            {
-                imageDic["人"] = sprites[0];
-                imageDic["人鱼"] = sprites[1];
-                
-                if (debugMode)
-                {
-                    Debug.Log($"[对话管理器] 图片字典初始化: 人={sprites[0].name}, 人鱼={sprites[1].name}");
-                }
-            }
-            else
-            {
-                Debug.LogWarning($"[对话管理器] Sprite列表不足，需要至少2个sprite");
-            }
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogError($"[对话管理器] 初始化图片字典失败: {e.Message}");
-        }
-    }
-    
-    /// <summary>
-    /// 确保组件引用
-    /// </summary>
-    private void EnsureComponentReferences()
-    {
-        // 尝试自动查找组件
-        if (spriteLeft == null)
-        {
-            spriteLeft = GetComponentInChildren<SpriteRenderer>();
-        }
-        
-        if (spriteRight == null)
-        {
-            SpriteRenderer[] sprites = GetComponentsInChildren<SpriteRenderer>();
-            foreach (var sprite in sprites)
-            {
-                if (sprite != spriteLeft)
-                {
-                    spriteRight = sprite;
-                    break;
-                }
-            }
-        }
-        
-        if (nameText == null)
-        {
-            nameText = GetComponentInChildren<TMP_Text>();
-        }
-        
-        if (dialogText == null)
-        {
-            TMP_Text[] texts = GetComponentsInChildren<TMP_Text>();
-            foreach (var text in texts)
-            {
-                if (text != nameText)
-                {
-                    dialogText = text;
-                    break;
-                }
-            }
-        }
-        
-        if (nextButton == null)
-        {
-            nextButton = GetComponentInChildren<Button>();
-        }
-        
-        if (debugMode)
-        {
-            Debug.Log($"[对话管理器] 组件引用检查:");
-            Debug.Log($"  spriteLeft: {spriteLeft != null}");
-            Debug.Log($"  spriteRight: {spriteRight != null}");
-            Debug.Log($"  nameText: {nameText != null}");
-            Debug.Log($"  dialogText: {dialogText != null}");
-            Debug.Log($"  nextButton: {nextButton != null}");
-        }
-    }
-    
-    /// <summary>
-    /// 初始化UI状态
-    /// </summary>
-    private void InitializeUI()
-    {
-        // 确保对话面板初始状态
-        if (dialogPanel != null && dialogPanel.activeSelf)
-        {
-            dialogPanel.SetActive(false);
-        }
-        
-        // 初始化文本
-        if (nameText != null)
-        {
-            nameText.text = "";
-        }
-        
-        if (dialogText != null)
-        {
-            dialogText.text = "";
-        }
-        
-        // 隐藏继续按钮
-        if (nextButton != null && nextButton.gameObject.activeSelf)
-        {
-            nextButton.gameObject.SetActive(false);
-        }
-        
-        // 清空选项按钮
-        ClearOptionButtons();
-        
-        isShowingDialog = false;
-        isDialogEnded = false;
-        
-        if (debugMode)
-        {
-            Debug.Log($"[对话管理器] UI初始化完成");
-        }
-    }
-    #endregion
+  /// 左侧角色图像
 
-    #region 对话控制
-    /// <summary>
-    /// 开始对话
-    /// </summary>
-    public void StartDialog()
-    {
-        if (isShowingDialog) return;
-        
-        try
-        {
-            if (debugMode)
-            {
-                Debug.Log($"[对话管理器] 开始对话");
-            }
-            
-            // 重置对话索引
-            dialogIndex = 0;
-            
-            // 读取对话数据
-            if (dialogDataFile != null)
-            {
-                ReadText(dialogDataFile);
-            }
-            else
-            {
-                Debug.LogError($"[对话管理器] 对话数据文件未设置！");
-                return;
-            }
-            
-            // 显示对话面板
-            if (dialogPanel != null && !dialogPanel.activeSelf)
-            {
-                dialogPanel.SetActive(true);
-            }
-            
-            isShowingDialog = true;
-            isDialogEnded = false;
-            
-            // 显示第一行对话
-            ShowDiaLogRow();
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogError($"[对话管理器] 开始对话失败: {e.Message}");
-            EndDialog();
-        }
-    }
-    
-    /// <summary>
-    /// 结束对话
-    /// </summary>
-    public void EndDialog()
-    {
-        if (!isShowingDialog) return;
-        
-        if (debugMode)
-        {
-            Debug.Log($"[对话管理器] 结束对话");
-        }
-        
-        // 隐藏对话面板
-        if (dialogPanel != null && dialogPanel.activeSelf)
-        {
-            dialogPanel.SetActive(false);
-        }
-        
-        // 清理UI
-        InitializeUI();
-        
-        isShowingDialog = false;
-        isDialogEnded = true;
-        
-        // 发送对话结束事件
-        SendMessage("OnDialogEnded", SendMessageOptions.DontRequireReceiver);
-    }
-    
-    /// <summary>
-    /// 继续下一句对话
-    /// </summary>
-    public void OnClickNext()
-    {
-        if (!isShowingDialog || isDialogEnded) return;
-        
-        if (debugMode)
-        {
-            Debug.Log($"[对话管理器] 点击继续按钮，当前索引: {dialogIndex}");
-        }
-        
-        ShowDiaLogRow();
-    }
-    #endregion
+  /// </summary>
 
-    #region 对话数据处理
-    /// <summary>
-    /// 读取对话文本
-    /// </summary>
-    public void ReadText(TextAsset _textAsset)
-    {
-        if (_textAsset == null)
-        {
-            Debug.LogError($"[对话管理器] 对话文本为空！");
-            return;
-        }
-        
-        try
-        {
-            // 按行分割文本
-            dialogRows = _textAsset.text.Split('\n');
-            
-            if (debugMode)
-            {
-                Debug.Log($"[对话管理器] 读取成功，行数: {dialogRows.Length}");
-            }
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogError($"[对话管理器] 读取对话文本失败: {e.Message}");
-        }
-    }
-    
-    /// <summary>
-    /// 显示对话行
-    /// </summary>
-    public void ShowDiaLogRow()
-    {
-        if (dialogRows == null || dialogRows.Length == 0)
-        {
-            Debug.LogError($"[对话管理器] 对话行为空！");
-            EndDialog();
-            return;
-        }
-        
-        bool rowFound = false;
-        
-        for (int i = 0; i < dialogRows.Length; i++)
-        {
-            // 跳过空行
-            if (string.IsNullOrWhiteSpace(dialogRows[i]))
-                continue;
-                
-            string[] cells = dialogRows[i].Split(',');
-            
-            // 确保有足够的单元格
-            if (cells.Length < 6)
-            {
-                if (debugMode)
-                {
-                    Debug.LogWarning($"[对话管理器] 第{i}行单元格不足: {cells.Length}");
-                }
-                continue;
-            }
-            
-            // 对话行
-            if (cells[0] == "#" && int.TryParse(cells[1], out int rowIndex) && rowIndex == dialogIndex)
-            {
-                // 更新文本
-                UpdateText(cells[2], cells[4]);
-                
-                // 更新图片
-                UpdateImage(cells[2], cells[3]);
-                
-                // 更新对话索引
-                if (int.TryParse(cells[5], out int nextIndex))
-                {
-                    dialogIndex = nextIndex;
-                }
-                
-                // 显示继续按钮
-                if (nextButton != null && !nextButton.gameObject.activeSelf)
-                {
-                    nextButton.gameObject.SetActive(true);
-                }
-                
-                rowFound = true;
-                break;
-            }
-            // 选项行
-            else if (cells[0] == "&" && int.TryParse(cells[1], out int optionIndex) && optionIndex == dialogIndex)
-            {
-                // 隐藏继续按钮
-                if (nextButton != null && nextButton.gameObject.activeSelf)
-                {
-                    nextButton.gameObject.SetActive(false);
-                }
-                
-                // 生成选项按钮
-                GenerateOption(i);
-                rowFound = true;
-                break;
-            }
-            // 结束行
-            else if (cells[0] == "end" && int.TryParse(cells[1], out int endIndex) && endIndex == dialogIndex)
-            {
-                if (debugMode)
-                {
-                    Debug.Log("[对话管理器] 剧情结束");
-                }
-                EndDialog();
-                rowFound = true;
-                break;
-            }
-        }
-        
-        if (!rowFound)
-        {
-            if (debugMode)
-            {
-                Debug.LogWarning($"[对话管理器] 未找到索引为 {dialogIndex} 的对话行");
-            }
-            EndDialog();
-        }
-    }
-    #endregion
+  public SpriteRenderer spriteLeft;
 
-    #region UI更新
-    /// <summary>
-    /// 更新文本信息
-    /// </summary>
-    public void UpdateText(string _name, string _text)
-    {
-        try
-        {
-            if (nameText != null)
-            {
-                nameText.text = _name;
-            }
-            
-            if (dialogText != null)
-            {
-                dialogText.text = _text;
-            }
-            
-            if (debugMode)
-            {
-                Debug.Log($"[对话管理器] 更新文本: {_name}: {_text}");
-            }
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogError($"[对话管理器] 更新文本失败: {e.Message}");
-        }
-    }
-    
-    /// <summary>
-    /// 更新图片信息
-    /// </summary>
-    public void UpdateImage(string _name, string _position)
-    {
-        try
-        {
-            if (imageDic.TryGetValue(_name, out Sprite targetSprite))
-            {
-                if (_position == "左" && spriteLeft != null)
-                {
-                    spriteLeft.sprite = targetSprite;
-                    
-                    if (debugMode)
-                    {
-                        Debug.Log($"[对话管理器] 更新左侧图片: {_name}");
-                    }
-                }
-                else if (_position == "右" && spriteRight != null)
-                {
-                    spriteRight.sprite = targetSprite;
-                    
-                    if (debugMode)
-                    {
-                        Debug.Log($"[对话管理器] 更新右侧图片: {_name}");
-                    }
-                }
-                else
-                {
-                    if (debugMode)
-                    {
-                        Debug.LogWarning($"[对话管理器] 未知位置或SpriteRenderer为空: {_position}");
-                    }
-                }
-            }
-            else
-            {
-                if (debugMode)
-                {
-                    Debug.LogWarning($"[对话管理器] 未找到角色图片: {_name}");
-                }
-            }
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogError($"[对话管理器] 更新图片失败: {e.Message}");
-        }
-    }
-    #endregion
+  /// <summary>
 
-    #region 选项系统
-    /// <summary>
-    /// 生成选项按钮
-    /// </summary>
-    public void GenerateOption(int _index)
-    {
-        if (_index >= dialogRows.Length)
-        {
-            Debug.LogError($"[对话管理器] 选项索引超出范围: {_index}");
-            return;
-        }
-        
-        try
-        {
-            string[] cells = dialogRows[_index].Split(',');
-            
-            if (cells[0] != "&" || cells.Length < 6)
-            {
-                if (debugMode)
-                {
-                    Debug.LogWarning($"[对话管理器] 无效的选项行格式");
-                }
-                return;
-            }
-            
-            // 创建选项按钮
-            GameObject button = Instantiate(optionButton, buttonGroup);
-            
-            // 设置按钮文本
-            TMP_Text buttonText = button.GetComponentInChildren<TMP_Text>();
-            if (buttonText != null)
-            {
-                buttonText.text = cells[4];
-            }
-            
-            // 绑定点击事件
-            Button buttonComponent = button.GetComponent<Button>();
-            if (buttonComponent != null)
-            {
-                if (int.TryParse(cells[5], out int optionId))
-                {
-                    buttonComponent.onClick.AddListener(() => OnOptionClick(optionId));
-                }
-                else
-                {
-                    Debug.LogError($"[对话管理器] 无法解析选项ID: {cells[5]}");
-                }
-            }
-            
-            if (debugMode)
-            {
-                Debug.Log($"[对话管理器] 生成选项: {cells[4]} -> {cells[5]}");
-            }
-            
-            // 递归生成下一个选项
-            GenerateOption(_index + 1);
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogError($"[对话管理器] 生成选项失败: {e.Message}");
-        }
-    }
-    
-    /// <summary>
-    /// 选项点击事件
-    /// </summary>
-    public void OnOptionClick(int _id)
-    {
-        if (debugMode)
-        {
-            Debug.Log($"[对话管理器] 选项点击: {_id}");
-        }
-        
-        // 更新对话索引
-        dialogIndex = _id;
-        
-        // 清空选项按钮
-        ClearOptionButtons();
-        
-        // 显示下一行对话
-        ShowDiaLogRow();
-    }
-    
-    /// <summary>
-    /// 清空选项按钮
-    /// </summary>
-    private void ClearOptionButtons()
-    {
-        if (buttonGroup == null) return;
-        
-        for (int i = buttonGroup.childCount - 1; i >= 0; i--)
-        {
-            Transform child = buttonGroup.GetChild(i);
-            if (child != null && child.gameObject != null)
-            {
-                Destroy(child.gameObject);
-            }
-        }
-        
-        if (debugMode)
-        {
-            Debug.Log($"[对话管理器] 清空选项按钮");
-        }
-    }
-    #endregion
+  /// 右侧角色图像
 
-    #region 调试方法
-    [ContextMenu("测试: 开始对话")]
-    public void TestStartDialog()
-    {
-        StartDialog();
-    }
+  /// </summary>
+
+  public SpriteRenderer spriteRight;
+
+
+
+  /// <summary>
+
+  /// 角色名字文本
+
+  /// </summary>
+
+  public TMP_Text nameText;
+
+
+
+  /// <summary>
+
+  /// 对话内容文本
+
+  /// </summary>
+
+  public TMP_Text dialogText;
+
+
+
+  /// <summary>
+
+  /// 角色图片列表
+
+  /// </summary>
+
+  public List<Sprite> sprites = new List<Sprite>();
+
+
+
+  /// <summary>
+
+  /// 角色名字对应图片的字典
+
+  /// </summary>
+
+  Dictionary<string, Sprite> imageDic = new Dictionary<string, Sprite>();
+
+  /// <summary>
+
+  /// 当前对话索引值
+
+  /// </summary>
+
+  public int dialogIndex;
+
+  /// <summary>
+
+  /// 对话文本按行分割
+
+  /// </summary>
+
+  public string[] dialogRows;
+
+  /// <summary>
+
+  /// 继续按钮
+
+  /// </summary>
+
+  public Button next;
+
+
+
+  /// <summary>
+
+  /// 选项按钮
+
+  /// </summary>
+
+  public GameObject optionButton;
+
+  /// <summary>
+
+  /// 选项按钮父节点
+
+  /// </summary>
+
+  public Transform buttonGroup;
+
+  // Start is called before the first frame update
+
+  private void Awake()
+
+  {
+
+    imageDic["人"] = sprites[0];
+
+    imageDic["人鱼"] = sprites[1];
+
+  }
+
+  void Start()
+
+  {
+
+    ReadText(dialogDataFile);
+
+    ShowDiaLogRow();
+
+    // UpdateText("安吉丽娜", "即使引导早已破碎,也请您当上艾尔登之王");
+
+    //UpdateImage("僵尸", false);//不在左侧
+
+    // UpdateImage("安吉丽娜", true);//在左侧
+
+  }
+
+  // Update is called once per frame
+
+  void Update()
+
+  {
+
+
+
+  }
+
+
+
+
+
+  //更新文本信息
+
+  public void UpdateText(string _name, string _text)
+
+  {
+
+    nameText.text = _name;
+
+    dialogText.text = _text;
+
+  }
+
+  //更新图片信息
+
+  public void UpdateImage(string _name, string _position)
+
+  {
+
+    // 1. 声明接收字典值的变量（根据你的 imageDic 值类型调整，此处假设为 Sprite）
+    Sprite targetSprite = null;
     
-    [ContextMenu("测试: 结束对话")]
-    public void TestEndDialog()
+    // 2. 尝试从字典中取值，返回 bool 表示是否取值成功
+    if (imageDic.TryGetValue(_name, out targetSprite))
     {
-        EndDialog();
-    }
-    
-    [ContextMenu("测试: 强制激活面板")]
-    public void TestForceActivatePanel()
-    {
-        if (dialogPanel != null)
+        // 3. 取值成功（键存在），执行图片赋值逻辑
+        if (_position == "左")
         {
-            bool before = dialogPanel.activeSelf;
-            dialogPanel.SetActive(true);
-            bool after = dialogPanel.activeSelf;
-            
-            Debug.Log($"[对话管理器] 强制激活面板: {before} -> {after}");
+            spriteLeft.sprite = targetSprite;
+        }
+        else if (_position == "右")
+        {
+            spriteRight.sprite = targetSprite;
         }
     }
-    
-    [ContextMenu("打印状态")]
-    public void PrintStatus()
+    else
     {
-        Debug.Log($"=== 对话管理器状态 ===");
-        Debug.Log($"显示对话中: {isShowingDialog}");
-        Debug.Log($"对话已结束: {isDialogEnded}");
-        Debug.Log($"当前索引: {dialogIndex}");
-        Debug.Log($"对话行数: {(dialogRows != null ? dialogRows.Length : 0)}");
-        Debug.Log($"面板激活: {dialogPanel != null && dialogPanel.activeSelf}");
-        Debug.Log($"图片字典数量: {imageDic.Count}");
+        // 4. 取值失败（键不存在），兜底处理（避免崩溃，便于排查问题）
+        Debug.LogError($"字典 imageDic 中不存在键：{_name}，无法更新图片");
+        // 可选：赋值默认图片，保证界面显示正常
+        // Sprite defaultSprite = Resources.Load<Sprite>("Default/DefaultCharacter");
+        // if (_position == "左") spriteLeft.sprite = defaultSprite;
+        // else if (_position == "右") spriteRight.sprite = defaultSprite;
     }
-    
-    [ContextMenu("验证UI引用")]
-    public void VerifyUIRefs()
+
+  }
+
+
+
+  public void ReadText(TextAsset _textAsset)
+
+  {
+
+    dialogRows = _textAsset.text.Split('\n');//以换行来分割
+
+                         // foreach(var row in rows)
+
+                         //{
+
+                         // string[] cell = row.Split(',');
+
+                         // }
+
+    Debug.Log("读取成果");
+
+  }
+
+
+
+  public void ShowDiaLogRow()
+
+  {
+
+    for(int i=0;i<dialogRows.Length;i++)
+
     {
-        Debug.Log($"=== UI引用验证 ===");
-        Debug.Log($"对话面板: {dialogPanel != null}");
-        Debug.Log($"左侧Sprite: {spriteLeft != null}");
-        Debug.Log($"右侧Sprite: {spriteRight != null}");
-        Debug.Log($"名字文本: {nameText != null}");
-        Debug.Log($"对话文本: {dialogText != null}");
-        Debug.Log($"继续按钮: {nextButton != null}");
-        Debug.Log($"选项按钮预制体: {optionButton != null}");
-        Debug.Log($"按钮组: {buttonGroup != null}");
+
+      string[] cells = dialogRows[i].Split(',');
+
+      if (cells[0] == "#" && int.Parse(cells[1]) == dialogIndex)
+
+      {
+
+        UpdateText(cells[2], cells[4]);
+
+        UpdateImage(cells[2], cells[3]);
+
+
+
+        dialogIndex = int.Parse(cells[5]);
+
+        next.gameObject.SetActive(true);
+
+        break;
+
+      }
+
+      else if (cells[0]== "&" && int.Parse(cells[1]) == dialogIndex)
+
+      {
+
+        next.gameObject.SetActive(false);//隐藏原来的按钮
+
+        GenerateOption(i);
+
+      }
+
+      else if (cells[0] == "end" && int.Parse(cells[i]) == dialogIndex)
+
+      {
+
+        Debug.Log("剧情结束");//这里结束
+
+      }
+
     }
-    #endregion
+
+  }
+
+  public void OnClickNext()
+
+  {
+
+    ShowDiaLogRow();
+
+  }
+
+  public void GenerateOption(int _index)//生成按钮
+
+  {
+
+    string[] cells = dialogRows[_index].Split(',');
+
+    if (cells[0] == "&")
+
+    {
+
+      GameObject button = Instantiate(optionButton, buttonGroup);
+
+      //绑定按钮事件
+
+      button.GetComponentInChildren<TMP_Text>().text = cells[4];
+
+      button.GetComponent<Button>().onClick.AddListener(delegate 
+
+      { 
+
+        OnOptionClick(int.Parse(cells[5]));
+
+      }
+
+      );
+
+      GenerateOption(_index + 1);
+
+    }
+
+    
+
+  }
+
+
+
+  public void OnOptionClick(int _id)
+
+  {
+
+    dialogIndex = _id;
+
+    ShowDiaLogRow();
+
+    for(int i=0;i < buttonGroup.childCount; i++)
+
+    {
+
+      Destroy(buttonGroup.GetChild(i).gameObject);
+
+    }
+
+  }
+
 }
