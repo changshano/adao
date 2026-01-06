@@ -22,4 +22,4 @@ MonoBehaviour:
   - propertyType: 2
     value: 2147483647
   icon: {fileID: 21300000, guid: 5e267547d580043469eb25f2435905d7, type: 3}
-  prefab: {fileID: 0}
+  prefab: {fileID: 4551950514312393916, guid: 854ad6bafe9c1a54ab0b8422a573cc7c, type: 3}

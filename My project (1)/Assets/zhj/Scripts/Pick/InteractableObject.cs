@@ -4,14 +4,25 @@ using UnityEngine;
 
 public class InteractableObject : MonoBehaviour
 {
-    public void OnClick(UnityEngine.AI.NavMeshAgent playerAgent)
+    public float interactDistance = 3f;
+    
+    public void OnClick(Transform playerTransform)
     {
-        playerAgent.SetDestination(transform.position);
-        Interact();
-
+        float distance = Vector3.Distance(playerTransform.position, transform.position);
+        Debug.Log($"点击物体：{gameObject.name}，距离：{distance}");
+        
+        if (distance <= interactDistance)
+        {
+            Interact();
+        }
+        else
+        {
+            Debug.Log("距离太远，无法交互，当前距离：" + distance);
+        }
     }
+    
     protected virtual void Interact()
     {
-        print("Interacting with Interactable Object.");
+        Debug.Log("基础交互完成");
     }
 }

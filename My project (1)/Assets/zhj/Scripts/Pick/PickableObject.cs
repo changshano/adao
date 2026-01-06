@@ -1,5 +1,5 @@
-using System.Collections;
 using System.Collections.Generic;
+using System.Collections;
 using UnityEngine;
 
 public class PickableObject : InteractableObject
@@ -8,6 +8,17 @@ public class PickableObject : InteractableObject
     
     protected override void Interact()
     {
-        print("Interacting with pcikableobject");
+        Debug.Log($"尝试拾取：{itemSO.name}");
+        
+        if (InventoryManager.Instance != null)
+        {
+            InventoryManager.Instance.AddItem(itemSO);
+            Debug.Log($"成功拾取：{itemSO.name}");
+            Destroy(gameObject);
+        }
+        else
+        {
+            Debug.LogError("InventoryManager实例为空！");
+        }
     }
 }
