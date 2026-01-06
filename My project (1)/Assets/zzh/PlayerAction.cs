@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 public class PlayerAction : MonoBehaviour
 {
-    [Header("ÒÆ¶¯ÉèÖÃ")]
+    [Header("ç§»åŠ¨è®¾ç½®")]
     public float playerMoveSpeed;
     public float playerJumpSpeed;
     public bool isGround;
@@ -15,7 +15,7 @@ public class PlayerAction : MonoBehaviour
     public Collider2D playerColl;
     public Animator playerAnim;
 
-    [Header("ÑªÁ¿ÉèÖÃ")]
+    [Header("è¡€é‡è®¾ç½®")]
     public float maxHealth = 100f;
     public float currentHealth = 85f;
     public float invincibleTime = 1f;
@@ -23,33 +23,42 @@ public class PlayerAction : MonoBehaviour
     private bool isInvincible = false;
     private bool isDead = false;
 
-    [Header("UIÒıÓÃ")]
+    [Header("UIå¼•ç”¨")]
     public Image healthBarImage;
 
-    [Header("¹ÖÎï¹¥»÷ÉèÖÃ")]
+    [Header("æ€ªç‰©æ”»å‡»è®¾ç½®")]
     public float enemyDamage = 10f;
     public float attackCooldown = 1f;
     private float lastAttackTime = 0f;
 
-    [Header("°¡µº¹¥»÷ÉèÖÃ")]
-    public float attackDamage = 10f; // ĞÂÔö
-    public Transform attackPoint; // ĞÂÔö
-    public float attackRange = 1.5f; // ĞÂÔö
-    public LayerMask enemyLayer; // ĞÂÔö
-    public float attackDelay = 0.3f; // ĞÂÔö£º¹¥»÷ÑÓ³ÙÊ±¼ä
-    private bool isAttacking = false; // ĞÂÔö£ºÊÇ·ñÕıÔÚ¹¥»÷
 
-    [Header("¶ş¶ÎÌøÉèÖÃ")]
+    [Header("åŸºç¡€å±æ€§")]
+    public float baseAttackDamage = 10f;  // åŸºç¡€æ”»å‡»åŠ›
+    private float equipmentAttackBonus = 0f;  // è£…å¤‡æ”»å‡»åŠ›åŠ æˆ
+    [Header("å•Šå²›æ”»å‡»è®¾ç½®")]
+    [SerializeField] private float _attackDamage;  // å¦‚æœéœ€è¦åºåˆ—åŒ–
+    public float attackDamage
+    {
+        get { return baseAttackDamage + equipmentAttackBonus; }
+    }
+    //public float attackDamage = 10f; // æ–°å¢
+    public Transform attackPoint; // æ–°å¢
+    public float attackRange = 1.5f; // æ–°å¢
+    public LayerMask enemyLayer; // æ–°å¢
+    public float attackDelay = 0.3f; // æ–°å¢ï¼šæ”»å‡»å»¶è¿Ÿæ—¶é—´
+    private bool isAttacking = false; // æ–°å¢ï¼šæ˜¯å¦æ­£åœ¨æ”»å‡»
+
+    [Header("äºŒæ®µè·³è®¾ç½®")]
     private int jumpCount = 0;
     private int maxJumpCount = 2;
     private bool canDoubleJump = false;
     private bool isJumping = false;
 
-    [Header("ËÀÍöÉèÖÃ")]
+    [Header("æ­»äº¡è®¾ç½®")]
     public GameObject deathEffect;
     public string deathTriggerName = "Die";
 
-    [Header("²âÊÔÉèÖÃ")]
+    [Header("æµ‹è¯•è®¾ç½®")]
     public KeyCode testDamageKey = KeyCode.Space;
 
     void Start()
@@ -58,31 +67,58 @@ public class PlayerAction : MonoBehaviour
         playerRB = GetComponent<Rigidbody2D>();
         playerAnim = GetComponent<Animator>();
 
-        // ³õÊ¼»¯ÑªÁ¿
+        // åˆå§‹åŒ–è¡€é‡
         currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
 
-        // ³õÊ¼»¯ÑªÌõUI
+        // åˆå§‹åŒ–è¡€æ¡UI
         if (healthBarImage == null)
         {
             FindHealthBar();
         }
         else
         {
-            // È·±£Í¼Æ¬ÀàĞÍÉèÖÃÕıÈ·
+            // ç¡®ä¿å›¾ç‰‡ç±»å‹è®¾ç½®æ­£ç¡®
             healthBarImage.type = Image.Type.Filled;
             healthBarImage.fillMethod = Image.FillMethod.Horizontal;
             healthBarImage.fillOrigin = (int)Image.OriginHorizontal.Left;
         }
 
         UpdateHealthBar();
-        Debug.Log($"°¢µºÑªÁ¿³õÊ¼»¯: {currentHealth}/{maxHealth}");
+        Debug.Log($"é˜¿å²›è¡€é‡åˆå§‹åŒ–: {currentHealth}/{maxHealth}");
+    }
+
+    // åº”ç”¨æ”»å‡»åŠ›åŠ æˆ
+    public void ApplyAttackBonus(float bonus)
+    {
+        equipmentAttackBonus += bonus;
+        Debug.Log($"æ”»å‡»åŠ›åŠ æˆ: {bonus}, å½“å‰æ€»æ”»å‡»åŠ›: {attackDamage}");
+    }
+
+    // ç§»é™¤æ”»å‡»åŠ›åŠ æˆ
+    public void RemoveAttackBonus(float reduction)
+    {
+        equipmentAttackBonus -= reduction;
+        if (equipmentAttackBonus < 0) equipmentAttackBonus = 0;
+        Debug.Log($"ç§»é™¤æ”»å‡»åŠ›åŠ æˆ: {reduction}, å½“å‰æ€»æ”»å‡»åŠ›: {attackDamage}");
+    }
+
+    // è·å–åŸºç¡€æ”»å‡»åŠ›
+    public float GetBaseAttackDamage()
+    {
+        return baseAttackDamage;
+    }
+
+    // è·å–æ€»æ”»å‡»åŠ›
+    public float GetTotalAttackDamage()
+    {
+        return attackDamage;
     }
 
     void Update()
     {
         if (isDead) return;
 
-        // ÎŞµĞÊ±¼äµ¹¼ÆÊ±
+        // æ— æ•Œæ—¶é—´å€’è®¡æ—¶
         if (isInvincible)
         {
             invincibleTimer -= Time.deltaTime;
@@ -96,7 +132,7 @@ public class PlayerAction : MonoBehaviour
         PlayerJump();
         isGround = Physics2D.OverlapCircle(foot.position, 0.1f, Ground);
 
-        // ÔÚµØÃæÊ±ÖØÖÃÌøÔ¾´ÎÊı
+        // åœ¨åœ°é¢æ—¶é‡ç½®è·³è·ƒæ¬¡æ•°
         if (isGround)
         {
             jumpCount = 0;
@@ -105,12 +141,12 @@ public class PlayerAction : MonoBehaviour
             playerAnim.SetBool("jump", false);
         }
 
-        // ÉèÖÃ¶¯»­²ÎÊı
+        // è®¾ç½®åŠ¨ç”»å‚æ•°
         playerAnim.SetBool("isGrounded", isGround);
 
         PlayerAttack();
 
-        // ²âÊÔÓÃ°´¼ü
+        // æµ‹è¯•ç”¨æŒ‰é”®
         if (Input.GetKeyDown(testDamageKey))
         {
             TakeDamage(enemyDamage);
@@ -171,11 +207,11 @@ public class PlayerAction : MonoBehaviour
 
         if (Input.GetButtonDown("Fire1"))
         {
-            // ²¥·Å¹¥»÷¶¯»­
+            // æ’­æ”¾æ”»å‡»åŠ¨ç”»
             playerAnim.SetTrigger("attack");
             isAttacking = true;
 
-            // ÑÓ³Ù¼ì²â²¢¹¥»÷µĞÈË£¬Óë¹¥»÷¶¯»­Í¬²½
+            // å»¶è¿Ÿæ£€æµ‹å¹¶æ”»å‡»æ•Œäººï¼Œä¸æ”»å‡»åŠ¨ç”»åŒæ­¥
             StartCoroutine(AttackAfterDelay());
         }
     }
@@ -184,22 +220,22 @@ public class PlayerAction : MonoBehaviour
     {
         yield return new WaitForSeconds(attackDelay);
 
-        // ¼ì²â²¢¹¥»÷µĞÈË
+        // æ£€æµ‹å¹¶æ”»å‡»æ•Œäºº
         AttackEnemies();
 
-        // ÖØÖÃ¹¥»÷×´Ì¬
+        // é‡ç½®æ”»å‡»çŠ¶æ€
         isAttacking = false;
     }
 
     void AttackEnemies()
     {
-        // Èç¹ûÃ»ÓĞÉèÖÃ¹¥»÷µã£¬Ê¹ÓÃ½ÇÉ«µÄÎ»ÖÃ
+        // å¦‚æœæ²¡æœ‰è®¾ç½®æ”»å‡»ç‚¹ï¼Œä½¿ç”¨è§’è‰²çš„ä½ç½®
         Vector2 attackPosition = attackPoint != null ? attackPoint.position : transform.position;
 
-        // ¼ì²â¹¥»÷·¶Î§ÄÚµÄµĞÈË
+        // æ£€æµ‹æ”»å‡»èŒƒå›´å†…çš„æ•Œäºº
         Collider2D[] hitEnemies = Physics2D.OverlapCircleAll(attackPosition, attackRange, enemyLayer);
 
-        Debug.Log($"¼ì²âµ½ {hitEnemies.Length} ¸öµĞÈË");
+        Debug.Log($"æ£€æµ‹åˆ° {hitEnemies.Length} ä¸ªæ•Œäºº");
 
         bool hitAnyEnemy = false;
         foreach (Collider2D enemyCollider in hitEnemies)
@@ -209,17 +245,17 @@ public class PlayerAction : MonoBehaviour
             {
                 enemy.TakeDamage(attackDamage);
                 hitAnyEnemy = true;
-                Debug.Log($"¹¥»÷µ½µĞÈË: {enemy.name}");
+                Debug.Log($"ä½¿ç”¨æ”»å‡»åŠ› {attackDamage} æ”»å‡»æ•Œäºº: {enemy.name}");
             }
         }
 
         if (!hitAnyEnemy)
         {
-            Debug.Log("¹¥»÷Î´ÃüÖĞÈÎºÎµĞÈË");
+            Debug.Log("æ”»å‡»æœªå‘½ä¸­ä»»ä½•æ•Œäºº");
         }
     }
 
-    // ÔÚ³¡¾°ÖĞÏÔÊ¾¹¥»÷·¶Î§£¨µ÷ÊÔÓÃ£©
+    // åœ¨åœºæ™¯ä¸­æ˜¾ç¤ºæ”»å‡»èŒƒå›´ï¼ˆè°ƒè¯•ç”¨ï¼‰
     void OnDrawGizmosSelected()
     {
         if (attackPoint != null)
@@ -229,41 +265,41 @@ public class PlayerAction : MonoBehaviour
         }
     }
 
-    // ÊÜµ½ÉËº¦
+    // å—åˆ°ä¼¤å®³
     public void TakeDamage(float damage)
     {
-        // Èç¹ûËÀÍö»òÎŞµĞ£¬²»¿ÛÑª
+        // å¦‚æœæ­»äº¡æˆ–æ— æ•Œï¼Œä¸æ‰£è¡€
         if (isDead || isInvincible)
         {
-            Debug.Log("Íæ¼Ò´¦ÓÚËÀÍö»òÎŞµĞ×´Ì¬£¬²»¿ÛÑª");
+            Debug.Log("ç©å®¶å¤„äºæ­»äº¡æˆ–æ— æ•ŒçŠ¶æ€ï¼Œä¸æ‰£è¡€");
             return;
         }
 
-        // ¿ÛÑª
+        // æ‰£è¡€
         currentHealth -= damage;
 
-        // ´¥·¢ÊÜÉË¶¯»­
+        // è§¦å‘å—ä¼¤åŠ¨ç”»
         playerAnim.SetTrigger("hurt");
 
-        // ½øÈëÎŞµĞ×´Ì¬
+        // è¿›å…¥æ— æ•ŒçŠ¶æ€
         isInvincible = true;
         invincibleTimer = invincibleTime;
 
-        // È·±£ÑªÁ¿²»»áµÍÓÚ0
+        // ç¡®ä¿è¡€é‡ä¸ä¼šä½äº0
         if (currentHealth <= 0)
         {
             currentHealth = 0;
-            Debug.Log("µ±Ç°ÑªÁ¿Ğ¡ÓÚµÈÓÚ0£¬µ÷ÓÃDie()·½·¨");
-            Die();  // µ÷ÓÃËÀÍö·½·¨
+            Debug.Log("å½“å‰è¡€é‡å°äºç­‰äº0ï¼Œè°ƒç”¨Die()æ–¹æ³•");
+            Die();  // è°ƒç”¨æ­»äº¡æ–¹æ³•
         }
 
-        // ¸üĞÂÑªÌõÏÔÊ¾
+        // æ›´æ–°è¡€æ¡æ˜¾ç¤º
         UpdateHealthBar();
 
-        Debug.Log($"°¢µºÊÜµ½ {damage} µãÉËº¦£¬Ê£ÓàÑªÁ¿: {currentHealth}");
+        Debug.Log($"é˜¿å²›å—åˆ° {damage} ç‚¹ä¼¤å®³ï¼Œå‰©ä½™è¡€é‡: {currentHealth}");
     }
 
-    // ×Ô¶¯±»¹ÖÎï¹¥»÷µÄ·½·¨
+    // è‡ªåŠ¨è¢«æ€ªç‰©æ”»å‡»çš„æ–¹æ³•
     public void GetAttackedByEnemy()
     {
         if (Time.time - lastAttackTime > attackCooldown)
@@ -275,37 +311,37 @@ public class PlayerAction : MonoBehaviour
 
     void Die()
     {
-        Debug.Log("½øÈëDie()·½·¨");
+        Debug.Log("è¿›å…¥Die()æ–¹æ³•");
         if (isDead)
         {
-            Debug.Log("Íæ¼ÒÒÑ¾­ËÀÍö£¬·ÀÖ¹ÖØ¸´ËÀÍö");
-            return;  // ·ÀÖ¹ÖØ¸´ËÀÍö
+            Debug.Log("ç©å®¶å·²ç»æ­»äº¡ï¼Œé˜²æ­¢é‡å¤æ­»äº¡");
+            return;  // é˜²æ­¢é‡å¤æ­»äº¡
         }
 
         isDead = true;
 
-        // 1. ²¥·ÅËÀÍö¶¯»­
+        // 1. æ’­æ”¾æ­»äº¡åŠ¨ç”»
         playerAnim.SetTrigger(deathTriggerName);
-        Debug.Log($"´¥·¢ËÀÍö¶¯»­´¥·¢Æ÷: {deathTriggerName}");
+        Debug.Log($"è§¦å‘æ­»äº¡åŠ¨ç”»è§¦å‘å™¨: {deathTriggerName}");
 
-        // 2. Í£Ö¹ÒÆ¶¯
+        // 2. åœæ­¢ç§»åŠ¨
         playerRB.velocity = Vector2.zero;
-        playerRB.isKinematic = true;  // ±ä³ÉÔË¶¯Ñ§¸ÕÌå£¬²»ÔÙÊÜÎïÀíÓ°Ïì
+        playerRB.isKinematic = true;  // å˜æˆè¿åŠ¨å­¦åˆšä½“ï¼Œä¸å†å—ç‰©ç†å½±å“
 
-        // 3. ½ûÓÃÅö×²Ìå£¨¿ÉÑ¡£¬·ÀÖ¹Ê¬Ìå»¹ºÍÎïÌåÅö×²£©
+        // 3. ç¦ç”¨ç¢°æ’ä½“ï¼ˆå¯é€‰ï¼Œé˜²æ­¢å°¸ä½“è¿˜å’Œç‰©ä½“ç¢°æ’ï¼‰
         if (playerColl != null)
             playerColl.enabled = false;
 
-        // 4. ²¥·ÅËÀÍöÌØĞ§£¨Èç¹ûÓĞ£©
+        // 4. æ’­æ”¾æ­»äº¡ç‰¹æ•ˆï¼ˆå¦‚æœæœ‰ï¼‰
         if (deathEffect != null)
             Instantiate(deathEffect, transform.position, Quaternion.identity);
 
-        // 5. Í£Ö¹ËùÓĞÊäÈë
-        // Í¨¹ıÉèÖÃisDead=true£¬UpdateÖĞµÄ²Ù×÷ÒÑ¾­»á±»×èÖ¹
+        // 5. åœæ­¢æ‰€æœ‰è¾“å…¥
+        // é€šè¿‡è®¾ç½®isDead=trueï¼ŒUpdateä¸­çš„æ“ä½œå·²ç»ä¼šè¢«é˜»æ­¢
 
-        Debug.Log("°¢µºÒÑ¾­ÕóÍö£¡");
+        Debug.Log("é˜¿å²›å·²ç»é˜µäº¡ï¼");
 
-        // 6. ÑÓ³ÙÏú»Ù
+        // 6. å»¶è¿Ÿé”€æ¯
         StartCoroutine(DestroyAfterDeath());
     }
 
@@ -320,14 +356,14 @@ public class PlayerAction : MonoBehaviour
         }
 
         UpdateHealthBar();
-        Debug.Log($"°¢µº»Ö¸´ÁË {healAmount} µãÑªÁ¿£¬µ±Ç°ÑªÁ¿: {currentHealth}");
+        Debug.Log($"é˜¿å²›æ¢å¤äº† {healAmount} ç‚¹è¡€é‡ï¼Œå½“å‰è¡€é‡: {currentHealth}");
     }
 
     void UpdateHealthBar()
     {
         if (healthBarImage == null)
         {
-            Debug.LogWarning("ÑªÌõUIÎª¿Õ£¬³¢ÊÔ²éÕÒ...");
+            Debug.LogWarning("è¡€æ¡UIä¸ºç©ºï¼Œå°è¯•æŸ¥æ‰¾...");
             FindHealthBar();
             if (healthBarImage == null) return;
         }
@@ -335,7 +371,7 @@ public class PlayerAction : MonoBehaviour
         float healthPercent = currentHealth / maxHealth;
         healthBarImage.fillAmount = healthPercent;
 
-        // ÑªÁ¿ÑÕÉ«±ä»¯
+        // è¡€é‡é¢œè‰²å˜åŒ–
         if (healthPercent < 0.3f)
         {
             healthBarImage.color = Color.red;
@@ -361,12 +397,12 @@ public class PlayerAction : MonoBehaviour
                 healthBarImage.type = Image.Type.Filled;
                 healthBarImage.fillMethod = Image.FillMethod.Horizontal;
                 healthBarImage.fillOrigin = (int)Image.OriginHorizontal.Left;
-                Debug.Log("³É¹¦ÕÒµ½²¢ÉèÖÃÑªÌõUI");
+                Debug.Log("æˆåŠŸæ‰¾åˆ°å¹¶è®¾ç½®è¡€æ¡UI");
             }
         }
         else
         {
-            Debug.LogError("Ã»ÓĞÕÒµ½ÑªÌõUI¶ÔÏó£¡Çë¼ì²é¶ÔÏóÂ·¾¶ÊÇ·ñÎª'Image_HPbar/Image_Mask'");
+            Debug.LogError("æ²¡æœ‰æ‰¾åˆ°è¡€æ¡UIå¯¹è±¡ï¼è¯·æ£€æŸ¥å¯¹è±¡è·¯å¾„æ˜¯å¦ä¸º'Image_HPbar/Image_Mask'");
         }
     }
 

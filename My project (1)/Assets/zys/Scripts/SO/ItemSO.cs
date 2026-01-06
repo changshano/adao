@@ -18,7 +18,7 @@ public class ItemSO : ScriptableObject
 public enum ItemType
 {
     Weapon,
-    Consumable
+    Consumable,
 }
 
 [Serializable]
@@ -26,6 +26,7 @@ public class ItemProperty
 {
     public ItemPropertyType propertyType;
     public int value;
+    public string description;
 }
 
 public enum ItemPropertyType
