@@ -52,19 +52,65 @@ public class InventoryUI : MonoBehaviour
     {
         uiGameObject.SetActive(true);
     }
+
     public void Hide()
     {
         uiGameObject.SetActive(false);
     }
+
     public void AddItem(ItemSO itemSO)
     {
-        GameObject itemGo = GameObject.Instantiate(itemPrefab);
-        itemGo.transform.parent = content.transform;
+        Debug.Log($"InventoryUI.AddItem 被调用，物品: {itemSO?.name}");
+
+        if (itemSO == null)
+        {
+            Debug.LogError("AddItem: itemSO为空");
+            return;
+        }
+
+        if (itemPrefab == null)
+        {
+            Debug.LogError("AddItem: itemPrefab为空，请检查Inspector中的设置");
+            return;
+        }
+
+        if (content == null)
+        {
+            Debug.LogError("AddItem: content为空，请检查UI层级结构");
+            return;
+        }
+
+        Debug.Log("开始实例化物品UI");
+
+        // 使用正确的实例化方法
+        GameObject itemGo = Instantiate(itemPrefab, content.transform);
+
+        // 确保RectTransform正确设置
+        RectTransform rectTransform = itemGo.GetComponent<RectTransform>();
+        if (rectTransform != null)
+        {
+            rectTransform.localScale = Vector3.one;
+            rectTransform.anchoredPosition = new Vector2(0, 0);
+        }
+
+        // 强制激活游戏对象
+        itemGo.SetActive(true);
+
         ItemUI itemUI = itemGo.GetComponent<ItemUI>();
 
-        itemUI.InitItem(itemSO);
+        if (itemUI != null)
+        {
+            Debug.Log("找到ItemUI组件，初始化物品");
+            itemUI.InitItem(itemSO);
+        }
+        else
+        {
+            Debug.LogError("实例化的预制体缺少ItemUI组件");
+        }
+
+        Debug.Log($"物品UI创建完成: {itemGo.name}");
     }
-    
+
     public void OnItemClick(ItemSO itemSO, ItemUI itemUI)
     {
         itemDetailUI.UpdateItemDetailUI(itemSO, itemUI);
