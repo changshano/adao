@@ -1020,7 +1020,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &93648181
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5433,10 +5433,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be25c1f0b713bd9499ca78f4039246ac, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  iconImage: {fileID: 0}
   nameText: {fileID: 967729268}
-  typeText: {fileID: 0}
-  descriptionText: {fileID: 0}
   propertyGrid: {fileID: 1465551819}
   propertyTemplate: {fileID: 2109702226}
 --- !u!114 &867873234
@@ -6249,14 +6246,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0081126219132694992b49ff6038bc40, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  HP: 0
   maxHP: 200
+  currentHP: 100
+  isDead: 0
+  damageColor: {r: 1, g: 0, b: 0, a: 1}
+  damageFlashDuration: 0.1
+  deathEffect: {fileID: 0}
+  destroyDelay: 2
+  deathTriggerName: Die
   target: {fileID: 0}
   enemyMoveSpeed: 2
   followDistance: 5
   attackDistance: 1
   attackDamage: 10
   attackCooldown: 0.5
+  dropItems: []
+  dropChance: 0.5
 --- !u!70 &931757896
 CapsuleCollider2D:
   m_ObjectHideFlags: 0
@@ -16213,6 +16218,12 @@ MonoBehaviour:
   healthBarImage: {fileID: 1251918291}
   enemyDamage: 10
   attackCooldown: 1
+  attackDamage: 10
+  attackPoint: {fileID: 1967324592}
+  attackRange: 1.5
+  enemyLayer:
+    serializedVersion: 2
+    m_Bits: 0
   deathEffect: {fileID: 0}
   deathTriggerName: Die
   testDamageKey: 289

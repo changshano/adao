@@ -31,6 +31,13 @@ public class PlayerAction : MonoBehaviour
     public float attackCooldown = 1f;
     private float lastAttackTime = 0f;
 
+    [Header("啊岛攻击设置")]
+    public float attackDamage = 10f; // 新增
+    public Transform attackPoint; // 新增
+    public float attackRange = 1.5f; // 新增
+    public LayerMask enemyLayer; // 新增
+
+
     [Header("二段跳设置")]
     private int jumpCount = 0;
     private int maxJumpCount = 2;
@@ -163,33 +170,62 @@ public class PlayerAction : MonoBehaviour
 
         if (Input.GetButtonDown("Fire1"))
         {
+            // 播放攻击动画
             playerAnim.SetTrigger("attack");
+
+            // 检测并攻击敌人
+            AttackEnemies();
+        }
+
+    }
+
+    void AttackEnemies()
+    {
+        // 检测攻击范围内的敌人
+        Collider2D[] hitEnemies = Physics2D.OverlapCircleAll(attackPoint.position, attackRange, enemyLayer);
+
+        foreach (Collider2D enemyCollider in hitEnemies)
+        {
+            Enemy enemy = enemyCollider.GetComponent<Enemy>();
+            if (enemy != null && !enemy.isDead)
+            {
+                enemy.TakeDamage(attackDamage);
+            }
         }
     }
+
 
     // 受到伤害
     public void TakeDamage(float damage)
     {
-        if (isDead || isInvincible) return;
+        // 如果死亡或无敌，不扣血
+        if (isDead || isInvincible)
+        {
+            Debug.Log("玩家处于死亡或无敌状态，不扣血");
+            return;
+        }
 
-        // 冷却时间检查
-        if (Time.time - lastAttackTime < attackCooldown) return;
-
+        // 扣血
         currentHealth -= damage;
-        lastAttackTime = Time.time;
 
+        // 触发受伤动画
         playerAnim.SetTrigger("hurt");
 
+        // 进入无敌状态
         isInvincible = true;
         invincibleTimer = invincibleTime;
 
+        // 确保血量不会低于0
         if (currentHealth <= 0)
         {
             currentHealth = 0;
-            Die();
+            Debug.Log("当前血量小于等于0，调用Die()方法");
+            Die();  // 调用死亡方法
         }
 
+        // 更新血条显示
         UpdateHealthBar();
+
         Debug.Log($"阿岛受到 {damage} 点伤害，剩余血量: {currentHealth}");
     }
 
@@ -205,21 +241,36 @@ public class PlayerAction : MonoBehaviour
 
     void Die()
     {
-        if (isDead) return;
+        Debug.Log("进入Die()方法");
+        if (isDead)
+        {
+            Debug.Log("玩家已经死亡，防止重复死亡");
+            return;  // 防止重复死亡
+        }
 
         isDead = true;
+
+        // 1. 播放死亡动画
         playerAnim.SetTrigger(deathTriggerName);
+        Debug.Log($"触发死亡动画触发器: {deathTriggerName}");
 
+        // 2. 停止移动
         playerRB.velocity = Vector2.zero;
-        playerRB.isKinematic = true;
+        playerRB.isKinematic = true;  // 变成运动学刚体，不再受物理影响
 
+        // 3. 禁用碰撞体（可选，防止尸体还和物体碰撞）
         if (playerColl != null)
             playerColl.enabled = false;
 
+        // 4. 播放死亡特效（如果有）
         if (deathEffect != null)
             Instantiate(deathEffect, transform.position, Quaternion.identity);
 
+        // 5. 停止所有输入
+        // 通过设置isDead=true，Update中的操作已经会被阻止
+
         Debug.Log("阿岛已经阵亡！");
+
     }
 
     public void Heal(float healAmount)

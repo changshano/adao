@@ -4,43 +4,194 @@ using UnityEngine;
 
 public class Enemy : MonoBehaviour
 {
-    public float HP;
-    public float maxHP;
+    [Header("血量设置")]
+    public float maxHP = 100f; // 最大血量
+    public float currentHP;    // 当前血量
+    public bool isDead = false; // 是否死亡
+
+    [Header("受伤效果")]
+    public Color damageColor = Color.red; // 受伤时颜色
+    public float damageFlashDuration = 0.1f; // 受伤闪烁时间
+    private SpriteRenderer spriteRenderer; // 精灵渲染器
+    private Color originalColor; // 原始颜色
+
+    [Header("死亡设置")]
+    public GameObject deathEffect; // 死亡特效
+    public float destroyDelay = 2f; // 死亡后销毁延迟
+    public string deathTriggerName = "Die"; // 死亡动画触发器名称
+
+    [Header("移动设置")]
     public Transform target;
     public float enemyMoveSpeed;
     public float followDistance;
 
-    // 攻击相关参数
+    [Header("攻击设置")]
     public float attackDistance; // 攻击触发的距离
     public float attackDamage;   // 攻击伤害
     public float attackCooldown; // 攻击冷却时间
     private float lastAttackTime; // 上一次攻击的时间
 
+    [Header("物品掉落")]
+    public GameObject[] dropItems; // 可能掉落的物品
+    public float dropChance = 0.5f; // 掉落概率
+
+    // 动画组件
     private Animator animator;
     private bool isFollowingPlayer = false;
 
     void Start()
     {
-        HP = maxHP;
-        target = GameObject.FindGameObjectWithTag("Player").transform;
+        // 初始化血量
+        currentHP = maxHP;
+
+        // 获取目标玩家
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player != null)
+        {
+            target = player.transform;
+        }
+
+        // 获取组件
         animator = GetComponent<Animator>();
+        spriteRenderer = GetComponent<SpriteRenderer>();
 
         if (animator == null)
         {
             Debug.LogWarning("Animator component not found on " + gameObject.name);
         }
-        lastAttackTime = 0; // 初始化冷却时间
+
+        // 记录原始颜色
+        if (spriteRenderer != null)
+        {
+            originalColor = spriteRenderer.color;
+        }
+
+        // 初始化攻击冷却
+        lastAttackTime = 0;
     }
 
     void Update()
     {
+        // 如果敌人死亡，不执行任何逻辑
+        if (isDead) return;
+
         FollowPlayer();
         UpdateAnimationState();
         CheckAttack(); // 检测是否满足攻击条件
     }
 
+    // 受到伤害
+    public void TakeDamage(float damage)
+    {
+        if (isDead) return;
+
+        // 扣血
+        currentHP -= damage;
+
+        // 受伤反馈
+        StartCoroutine(DamageFlash());
+
+        // 播放受伤动画
+        if (animator != null)
+        {
+            animator.SetTrigger("Hurt");
+        }
+
+        Debug.Log($"{gameObject.name} 受到 {damage} 点伤害，剩余血量: {currentHP}");
+
+        // 检查是否死亡
+        if (currentHP <= 0)
+        {
+            currentHP = 0;
+            Die();
+        }
+    }
+
+    // 受伤闪烁效果
+    IEnumerator DamageFlash()
+    {
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.color = damageColor;
+            yield return new WaitForSeconds(damageFlashDuration);
+            spriteRenderer.color = originalColor;
+        }
+    }
+
+    // 死亡处理
+    void Die()
+    {
+        if (isDead) return;
+
+        isDead = true;
+
+        // 播放死亡动画
+        if (animator != null)
+        {
+            animator.SetTrigger(deathTriggerName);
+        }
+
+        // 停止移动和攻击
+        enemyMoveSpeed = 0;
+
+        // 禁用碰撞体
+        Collider2D collider = GetComponent<Collider2D>();
+        if (collider != null)
+        {
+            collider.enabled = false;
+        }
+
+        // 播放死亡特效
+        if (deathEffect != null)
+        {
+            Instantiate(deathEffect, transform.position, Quaternion.identity);
+        }
+
+        // 物品掉落
+        DropItems();
+
+        Debug.Log($"{gameObject.name} 已死亡");
+
+        // 延迟销毁敌人
+        Destroy(gameObject, destroyDelay);
+    }
+
+    // 物品掉落
+    void DropItems()
+    {
+        if (dropItems.Length == 0) return;
+
+        float randomValue = Random.Range(0f, 1f);
+        if (randomValue <= dropChance)
+        {
+            int randomIndex = Random.Range(0, dropItems.Length);
+            if (dropItems[randomIndex] != null)
+            {
+                Instantiate(dropItems[randomIndex], transform.position, Quaternion.identity);
+            }
+        }
+    }
+
+    // 治疗敌人
+    public void Heal(float healAmount)
+    {
+        if (isDead) return;
+
+        currentHP += healAmount;
+        if (currentHP > maxHP)
+        {
+            currentHP = maxHP;
+        }
+
+        Debug.Log($"{gameObject.name} 恢复了 {healAmount} 点血量，当前血量: {currentHP}");
+    }
+
+    // 以下为原有代码保持不变，只添加isDead检查
     void FollowPlayer()
     {
+        // 如果目标不存在或敌人死亡，不跟随
+        if (target == null || isDead) return;
+
         bool wasFollowing = isFollowingPlayer;
 
         if (Vector2.Distance(transform.position, target.position) < followDistance)
@@ -77,7 +228,7 @@ public class Enemy : MonoBehaviour
     // 检测攻击条件
     void CheckAttack()
     {
-        if (target == null) return;
+        if (target == null || isDead) return;
 
         // 满足：在攻击距离内 + 不在冷却中 + 不是正在攻击的状态
         if (Vector2.Distance(transform.position, target.position) < attackDistance
@@ -91,17 +242,18 @@ public class Enemy : MonoBehaviour
     // 触发攻击（播放动画 + 施加伤害）
     void TriggerAttack()
     {
-        animator.SetTrigger("Attack"); // 触发攻击动画
+        if (animator != null)
+        {
+            animator.SetTrigger("Attack"); // 触发攻击动画
+        }
         lastAttackTime = Time.time; // 记录攻击时间，重置冷却
-
-        // （可选）攻击动画播放到“伤害帧”时，再调用DealDamage()
-        // 这里先简单处理为动画开始时直接伤害，更严谨的做法是用动画事件
-        DealDamage();
     }
 
-    // 对玩家造成伤害
+    // 对玩家造成伤害（可以在动画事件中调用，或直接调用）
     void DealDamage()
     {
+        if (target == null || isDead) return;
+
         if (Vector2.Distance(transform.position, target.position) < attackDistance)
         {
             // 获取PlayerAction组件并调用TakeDamage方法
@@ -115,5 +267,17 @@ public class Enemy : MonoBehaviour
                 Debug.LogWarning("目标没有PlayerAction组件！");
             }
         }
+    }
+
+    // 获取当前血量百分比
+    public float GetHealthPercentage()
+    {
+        return currentHP / maxHP;
+    }
+
+    // 检查敌人是否存活
+    public bool IsAlive()
+    {
+        return !isDead && currentHP > 0;
     }
 }
