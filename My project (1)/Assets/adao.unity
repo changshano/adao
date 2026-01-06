@@ -48426,7 +48426,7 @@ Transform:
   m_GameObject: {fileID: 1978813103}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -7.51, y: -204.35, z: 0}
+  m_LocalPosition: {x: -9.47, y: -205.61, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -48463,7 +48463,7 @@ MonoBehaviour:
   healthBarImage: {fileID: 1251918291}
   enemyDamage: 10
   attackCooldown: 1
-  attackDamage: 50
+  baseAttackDamage: 10
   attackPoint: {fileID: 1967324592}
   attackRange: 1.5
   enemyLayer:

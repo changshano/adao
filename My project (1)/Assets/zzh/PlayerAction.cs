@@ -33,20 +33,19 @@ public class PlayerAction : MonoBehaviour
 
 
     [Header("基础属性")]
-    public float baseAttackDamage = 10f;  // 基础攻击力
+    [SerializeField] private float baseAttackDamage = 10f;  // 基础攻击力
     private float equipmentAttackBonus = 0f;  // 装备攻击力加成
-    [Header("啊岛攻击设置")]
-    [SerializeField] private float _attackDamage;  // 如果需要序列化
-    public float attackDamage
+    [Header("攻击设置")]
+    public Transform attackPoint;
+    public float attackRange = 1.5f;
+    public LayerMask enemyLayer;
+    public float attackDelay = 0.3f;
+    private bool isAttacking = false;
+    // 计算总攻击力
+    public float AttackDamage
     {
         get { return baseAttackDamage + equipmentAttackBonus; }
     }
-    //public float attackDamage = 10f; // 新增
-    public Transform attackPoint; // 新增
-    public float attackRange = 1.5f; // 新增
-    public LayerMask enemyLayer; // 新增
-    public float attackDelay = 0.3f; // 新增：攻击延迟时间
-    private bool isAttacking = false; // 新增：是否正在攻击
 
     [Header("二段跳设置")]
     private int jumpCount = 0;
@@ -91,7 +90,7 @@ public class PlayerAction : MonoBehaviour
     public void ApplyAttackBonus(float bonus)
     {
         equipmentAttackBonus += bonus;
-        Debug.Log($"攻击力加成: {bonus}, 当前总攻击力: {attackDamage}");
+        Debug.Log($"攻击力加成: {bonus}, 当前总攻击力: {AttackDamage}");
     }
 
     // 移除攻击力加成
@@ -99,7 +98,7 @@ public class PlayerAction : MonoBehaviour
     {
         equipmentAttackBonus -= reduction;
         if (equipmentAttackBonus < 0) equipmentAttackBonus = 0;
-        Debug.Log($"移除攻击力加成: {reduction}, 当前总攻击力: {attackDamage}");
+        Debug.Log($"移除攻击力加成: {reduction}, 当前总攻击力: {AttackDamage}");
     }
 
     // 获取基础攻击力
@@ -111,7 +110,7 @@ public class PlayerAction : MonoBehaviour
     // 获取总攻击力
     public float GetTotalAttackDamage()
     {
-        return attackDamage;
+        return AttackDamage;
     }
 
     void Update()
@@ -243,9 +242,10 @@ public class PlayerAction : MonoBehaviour
             Enemy enemy = enemyCollider.GetComponent<Enemy>();
             if (enemy != null && !enemy.isDead)
             {
-                enemy.TakeDamage(attackDamage);
+                // 改为使用 AttackDamage 属性
+                enemy.TakeDamage(AttackDamage);
                 hitAnyEnemy = true;
-                Debug.Log($"使用攻击力 {attackDamage} 攻击敌人: {enemy.name}");
+                Debug.Log($"使用攻击力 {AttackDamage} 攻击敌人: {enemy.name}");
             }
         }
 
