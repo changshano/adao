@@ -7,6 +7,7 @@ TagManager:
   - NPC
   - Enemy
   - Interactable
+  - Attack
   layers:
   - Default
   - TransparentFX
