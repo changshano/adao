@@ -1612,7 +1612,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 2036195892}
   m_Direction: 2
   m_Value: 1
-  m_Size: 0.5821044
+  m_Size: 0.58210444
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -3550,7 +3550,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 50, y: -350.01538}
+  m_AnchoredPosition: {x: 50, y: -153.36537}
   m_SizeDelta: {x: 420, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &584092296
@@ -5787,7 +5787,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 50, y: -125.00513}
+  m_AnchoredPosition: {x: 50, y: -59.455124}
   m_SizeDelta: {x: 420, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &888736531
@@ -6255,13 +6255,15 @@ MonoBehaviour:
   destroyDelay: 2
   deathTriggerName: Die
   target: {fileID: 0}
-  enemyMoveSpeed: 2
+  enemyMoveSpeed: 3
   followDistance: 5
   attackDistance: 1
   attackDamage: 10
   attackCooldown: 0.5
-  dropItems: []
-  dropChance: 0.5
+  attackDelay: 0.5
+  dropItems:
+  - {fileID: 1091111804142449292, guid: e3210e7648e791a4a932e55def76c1c1, type: 3}
+  dropChance: 1
 --- !u!70 &931757896
 CapsuleCollider2D:
   m_ObjectHideFlags: 0
@@ -9392,7 +9394,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 50, y: -575.02563}
+  m_AnchoredPosition: {x: 50, y: -247.27562}
   m_SizeDelta: {x: 420, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1432994940
@@ -15816,7 +15818,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 50, y: -800.0359}
+  m_AnchoredPosition: {x: 50, y: -341.18585}
   m_SizeDelta: {x: 420, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1922954551
@@ -16218,12 +16220,13 @@ MonoBehaviour:
   healthBarImage: {fileID: 1251918291}
   enemyDamage: 10
   attackCooldown: 1
-  attackDamage: 10
+  attackDamage: 50
   attackPoint: {fileID: 1967324592}
   attackRange: 1.5
   enemyLayer:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 256
+  attackDelay: 0.3
   deathEffect: {fileID: 0}
   deathTriggerName: Die
   testDamageKey: 289

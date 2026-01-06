@@ -36,7 +36,8 @@ public class PlayerAction : MonoBehaviour
     public Transform attackPoint; // 新增
     public float attackRange = 1.5f; // 新增
     public LayerMask enemyLayer; // 新增
-
+    public float attackDelay = 0.3f; // 新增：攻击延迟时间
+    private bool isAttacking = false; // 新增：是否正在攻击
 
     [Header("二段跳设置")]
     private int jumpCount = 0;
@@ -166,34 +167,67 @@ public class PlayerAction : MonoBehaviour
 
     void PlayerAttack()
     {
-        if (isDead) return;
+        if (isDead || isAttacking) return;
 
         if (Input.GetButtonDown("Fire1"))
         {
             // 播放攻击动画
             playerAnim.SetTrigger("attack");
+            isAttacking = true;
 
-            // 检测并攻击敌人
-            AttackEnemies();
+            // 延迟检测并攻击敌人，与攻击动画同步
+            StartCoroutine(AttackAfterDelay());
         }
+    }
 
+    IEnumerator AttackAfterDelay()
+    {
+        yield return new WaitForSeconds(attackDelay);
+
+        // 检测并攻击敌人
+        AttackEnemies();
+
+        // 重置攻击状态
+        isAttacking = false;
     }
 
     void AttackEnemies()
     {
-        // 检测攻击范围内的敌人
-        Collider2D[] hitEnemies = Physics2D.OverlapCircleAll(attackPoint.position, attackRange, enemyLayer);
+        // 如果没有设置攻击点，使用角色的位置
+        Vector2 attackPosition = attackPoint != null ? attackPoint.position : transform.position;
 
+        // 检测攻击范围内的敌人
+        Collider2D[] hitEnemies = Physics2D.OverlapCircleAll(attackPosition, attackRange, enemyLayer);
+
+        Debug.Log($"检测到 {hitEnemies.Length} 个敌人");
+
+        bool hitAnyEnemy = false;
         foreach (Collider2D enemyCollider in hitEnemies)
         {
             Enemy enemy = enemyCollider.GetComponent<Enemy>();
             if (enemy != null && !enemy.isDead)
             {
                 enemy.TakeDamage(attackDamage);
+                hitAnyEnemy = true;
+                Debug.Log($"攻击到敌人: {enemy.name}");
             }
+        }
+
+        if (!hitAnyEnemy)
+        {
+            Debug.Log("攻击未命中任何敌人");
         }
     }
 
+    // 在场景中显示攻击范围（调试用）
+    void OnDrawGizmosSelected()
+    {
+        if (attackPoint != null)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(attackPoint.position, attackRange);
+        }
+    }
 
     // 受到伤害
     public void TakeDamage(float damage)
@@ -271,6 +305,8 @@ public class PlayerAction : MonoBehaviour
 
         Debug.Log("阿岛已经阵亡！");
 
+        // 6. 延迟销毁
+        StartCoroutine(DestroyAfterDeath());
     }
 
     public void Heal(float healAmount)

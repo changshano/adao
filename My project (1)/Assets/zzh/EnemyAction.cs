@@ -30,6 +30,7 @@ public class Enemy : MonoBehaviour
     public float attackDamage;   // 攻击伤害
     public float attackCooldown; // 攻击冷却时间
     private float lastAttackTime; // 上一次攻击的时间
+    public float attackDelay = 0.5f; // 新增：攻击动画延迟时间
 
     [Header("物品掉落")]
     public GameObject[] dropItems; // 可能掉落的物品
@@ -39,10 +40,14 @@ public class Enemy : MonoBehaviour
     private Animator animator;
     private bool isFollowingPlayer = false;
 
+    private Rigidbody2D rb;
+
     void Start()
     {
         // 初始化血量
         currentHP = maxHP;
+
+        rb = GetComponent<Rigidbody2D>();
 
         // 获取目标玩家
         GameObject player = GameObject.FindGameObjectWithTag("Player");
@@ -67,7 +72,7 @@ public class Enemy : MonoBehaviour
         }
 
         // 初始化攻击冷却
-        lastAttackTime = 0;
+        lastAttackTime = -attackCooldown; // 初始化为可立即攻击
     }
 
     void Update()
@@ -199,7 +204,7 @@ public class Enemy : MonoBehaviour
             isFollowingPlayer = true;
 
             // 只有不在攻击状态时，才移动
-            if (!animator.GetCurrentAnimatorStateInfo(0).IsName("attack"))
+            if (!IsAttacking())
             {
                 transform.position = Vector2.MoveTowards(transform.position, target.position, enemyMoveSpeed * Time.deltaTime);
             }
@@ -220,9 +225,19 @@ public class Enemy : MonoBehaviour
     {
         if (animator != null)
         {
+
             animator.SetBool("isRunning", isFollowingPlayer);
             animator.SetFloat("Speed", isFollowingPlayer ? enemyMoveSpeed : 0f);
         }
+    }
+
+    // 检测是否在攻击状态（修改为更准确的检测）
+    bool IsAttacking()
+    {
+        if (animator == null) return false;
+
+        AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
+        return stateInfo.IsName("Attack") || stateInfo.IsTag("Attack");
     }
 
     // 检测攻击条件
@@ -233,7 +248,7 @@ public class Enemy : MonoBehaviour
         // 满足：在攻击距离内 + 不在冷却中 + 不是正在攻击的状态
         if (Vector2.Distance(transform.position, target.position) < attackDistance
             && Time.time >= lastAttackTime + attackCooldown
-            && !animator.GetCurrentAnimatorStateInfo(0).IsName("attack"))
+            && !IsAttacking())
         {
             TriggerAttack();
         }
@@ -247,6 +262,16 @@ public class Enemy : MonoBehaviour
             animator.SetTrigger("Attack"); // 触发攻击动画
         }
         lastAttackTime = Time.time; // 记录攻击时间，重置冷却
+
+        // 延迟执行伤害，与攻击动画同步
+        StartCoroutine(DealDamageAfterDelay());
+    }
+
+    // 延迟攻击伤害
+    IEnumerator DealDamageAfterDelay()
+    {
+        yield return new WaitForSeconds(attackDelay); // 等待攻击动画播放到伤害帧
+        DealDamage();
     }
 
     // 对玩家造成伤害（可以在动画事件中调用，或直接调用）
@@ -254,13 +279,15 @@ public class Enemy : MonoBehaviour
     {
         if (target == null || isDead) return;
 
-        if (Vector2.Distance(transform.position, target.position) < attackDistance)
+        // 稍微放宽攻击距离检测，确保攻击动作的连贯性
+        if (Vector2.Distance(transform.position, target.position) < attackDistance * 1.2f)
         {
             // 获取PlayerAction组件并调用TakeDamage方法
             PlayerAction playerAction = target.GetComponent<PlayerAction>();
             if (playerAction != null)
             {
                 playerAction.TakeDamage(attackDamage);
+                Debug.Log($"{gameObject.name} 攻击玩家，造成 {attackDamage} 点伤害");
             }
             else
             {
