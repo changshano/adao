@@ -2,9 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class InventoryManger : MonoBehaviour
+public class InventoryManager : MonoBehaviour
 {
-    public static InventoryManger Instance { get; private set; }
+    public static InventoryManager Instance { get; private set; }
     private void Awake()
     {
         if(Instance!=null && Instance != this)
@@ -21,5 +21,10 @@ public class InventoryManger : MonoBehaviour
     {
         itemList.Add(item);
         InventoryUI.Instance.AddItem(item);
+    }
+
+    public void RemoveItem(ItemSO itemSO)
+    {
+        itemList.Remove(itemSO);
     }
 }

@@ -84,12 +84,16 @@ public class ItemDetailUI : MonoBehaviour
 
 
     }
-
-    /*
+    
     public void OnUseButtonClick()
     {
         InventoryUI.Instance.OnItemUse(itemSO, itemUI);
         this.gameObject.SetActive(false);
     }
-    */
+
+    public void OnDiscardButtonClick()
+    {
+        InventoryUI.Instance.OnItemDiscard(itemSO, itemUI);
+        this.gameObject.SetActive(false);
+    }
 }
