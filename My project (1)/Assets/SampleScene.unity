@@ -560,13 +560,13 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 818416848}
-        m_TargetAssemblyTypeName: 
-        m_MethodName: 
+      - m_Target: {fileID: 818416852}
+        m_TargetAssemblyTypeName: ItemDetailUI, Assembly-CSharp
+        m_MethodName: OnDiscardButtonClick
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: 
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
@@ -5361,7 +5361,7 @@ GameObject:
   - component: {fileID: 376633385}
   - component: {fileID: 376633384}
   m_Layer: 5
-  m_Name: Text (TMP)
+  m_Name: Property
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -6760,7 +6760,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &531253363
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9163,10 +9163,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be25c1f0b713bd9499ca78f4039246ac, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  iconImage: {fileID: 0}
   nameText: {fileID: 1743085062}
-  typeText: {fileID: 0}
-  descriptionText: {fileID: 0}
   propertyGrid: {fileID: 970980681}
   propertyTemplate: {fileID: 1862534733}
 --- !u!4 &822292593 stripped
@@ -9460,7 +9457,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\u4E22\u5F03"
+  m_text: "\u9500\u6BC1"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: f33fd4050da604f4a8598aebeb79f99d, type: 2}
   m_sharedMaterial: {fileID: 1757187136393011784, guid: f33fd4050da604f4a8598aebeb79f99d, type: 2}
