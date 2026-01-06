@@ -72,8 +72,35 @@ public class InventoryUI : MonoBehaviour
 
     public void OnItemUse(ItemSO itemSO, ItemUI itemUI)
     {
-        Destroy(itemUI.gameObject);
-        InventoryManager.Instance.RemoveItem(itemSO);
+        // 检查物品类型是否为武器
+        if (itemSO.itemType == ItemType.Weapon)
+        {
+            // 如果是武器类型，跳转到装备UI
+            if (EquipmentUI.Instance != null)
+            {
+                EquipmentUI.Instance.EquipWeapon(itemSO, itemUI);
+            }
+        }
+        else
+        {
+            // 处理消耗品类型的物品
+            Destroy(itemUI.gameObject);
+            InventoryManager.Instance.RemoveItem(itemSO);
+
+            // 这里可以添加消耗品使用的逻辑
+            Debug.Log($"使用了消耗品: {itemSO.name}");
+
+            // 示例：如果消耗品有属性，可以应用这些属性
+            if (itemSO.propertyList != null && itemSO.propertyList.Count > 0)
+            {
+                // 处理消耗品属性
+                foreach (var property in itemSO.propertyList)
+                {
+                    // 这里可以根据属性类型做不同处理
+                    Debug.Log($"消耗品属性: {property.propertyType} = {property.value}");
+                }
+            }
+        }
 
 
         // GameObject.FindGameObjectWithTag(Tag.PLAYER).GetComponent<Player>().UseItem(itemSO);
