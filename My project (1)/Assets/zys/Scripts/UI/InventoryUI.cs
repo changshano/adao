@@ -13,6 +13,12 @@ public class InventoryUI : MonoBehaviour
 
     public ItemDetailUI itemDetailUI;
 
+    [Header("回血特效设置")]
+    [SerializeField] private int healTextFontSize = 12;  // 调整字体大小为12
+    [SerializeField] private float healTextDuration = 2.5f;  // 调整持续时间为2.5秒
+    [SerializeField] private float healTextFloatHeight = 1.5f;  // 浮动高度调整为1.5
+    [SerializeField] private Color healTextColor = Color.green;  // 文字颜色
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -144,12 +150,112 @@ public class InventoryUI : MonoBehaviour
                 Debug.Log($"装备完成");
             }
         }
+        else if (itemSO.itemType == ItemType.Consumable)
+        {
+            // 处理可消耗品
+            Debug.Log($"使用可消耗品: {itemSO.name}");
+
+            // 获取玩家引用
+            PlayerAction player = FindObjectOfType<PlayerAction>();
+
+            if (player != null)
+            {
+                // 计算可消耗品的效果
+                float totalHPBonus = 0f;
+
+                foreach (ItemProperty property in itemSO.propertyList)
+                {
+                    if (property.propertyType == ItemPropertyType.HPValue)
+                    {
+                        totalHPBonus += property.value;
+                    }
+                }
+
+                if (totalHPBonus > 0)
+                {
+                    // 恢复血量
+                    player.Heal(totalHPBonus);
+                    Debug.Log($"恢复 {totalHPBonus} 点生命值，当前血量: {player.GetCurrentHealth()}");
+
+                    // 显示治疗效果提示
+                    ShowHealEffect(totalHPBonus);
+                }
+                else
+                {
+                    Debug.LogWarning($"可消耗品 {itemSO.name} 没有生命值恢复效果");
+                }
+
+                // 从背包移除物品
+                Destroy(itemUI.gameObject);
+                if (InventoryManager.Instance != null)
+                {
+                    InventoryManager.Instance.RemoveItem(itemSO);
+                }
+            }
+            else
+            {
+                Debug.LogError("找不到玩家对象，无法使用可消耗品");
+            }
+        }
         else
         {
             // 非武器物品的原有逻辑
             Destroy(itemUI.gameObject);
             InventoryManager.Instance.RemoveItem(itemSO);
         }
+    }
+
+    // 显示治疗效果提示
+    private void ShowHealEffect(float healAmount)
+    {
+        // 找到玩家位置
+        PlayerAction player = FindObjectOfType<PlayerAction>();
+        if (player != null)
+        {
+            Vector3 playerPosition = player.transform.position;
+
+            // 创建治疗效果文字
+            GameObject healText = new GameObject("HealText");
+            healText.transform.position = playerPosition + Vector3.up * 2f;
+
+            TextMesh textMesh = healText.AddComponent<TextMesh>();
+            textMesh.text = $"+{healAmount} HP";
+            textMesh.fontSize = 20;
+            textMesh.color = Color.green;
+            textMesh.anchor = TextAnchor.MiddleCenter;
+
+            // 添加浮动动画
+            StartCoroutine(FloatHealText(healText));
+        }
+    }
+
+    IEnumerator FloatHealText(GameObject textObject)
+    {
+        float duration = 1.5f;
+        float elapsed = 0f;
+        Vector3 startPosition = textObject.transform.position;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float progress = elapsed / duration;
+
+            // 向上浮动
+            textObject.transform.position = startPosition + Vector3.up * (2f * progress);
+
+            // 渐变消失
+            TextMesh textMesh = textObject.GetComponent<TextMesh>();
+            if (textMesh != null)
+            {
+                Color color = textMesh.color;
+                color.a = 1f - progress;
+                textMesh.color = color;
+            }
+
+            yield return null;
+        }
+
+        Destroy(textObject);
     }
 
     public void OnItemDiscard(ItemSO itemSO, ItemUI itemUI)

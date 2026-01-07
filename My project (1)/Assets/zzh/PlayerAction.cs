@@ -345,9 +345,11 @@ public class PlayerAction : MonoBehaviour
         StartCoroutine(DestroyAfterDeath());
     }
 
-    public void Heal(float healAmount)
+    public float Heal(float healAmount)
     {
-        if (isDead) return;
+        if (isDead) return 0f;
+
+        float healthBefore = currentHealth;
 
         currentHealth += healAmount;
         if (currentHealth > maxHealth)
@@ -355,8 +357,19 @@ public class PlayerAction : MonoBehaviour
             currentHealth = maxHealth;
         }
 
+        float actualHealed = currentHealth - healthBefore;
+
         UpdateHealthBar();
-        Debug.Log($"阿岛恢复了 {healAmount} 点血量，当前血量: {currentHealth}");
+
+        // 播放治疗特效（如果有）
+        if (actualHealed > 0)
+        {
+            playerAnim.SetTrigger("heal");
+        }
+
+        Debug.Log($"阿岛恢复了 {actualHealed} 点血量，当前血量: {currentHealth}/{maxHealth}");
+
+        return actualHealed;
     }
 
     void UpdateHealthBar()
