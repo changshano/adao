@@ -4,39 +4,43 @@ using UnityEngine;
 
 public class Enemy : MonoBehaviour
 {
-    [Header("ÑªÁ¿ÉèÖÃ")]
-    public float maxHP = 100f; // ×î´óÑªÁ¿
-    public float currentHP;    // µ±Ç°ÑªÁ¿
-    public bool isDead = false; // ÊÇ·ñËÀÍö
+    // åœ¨ç°æœ‰Headerä¸‹æ–¹æ·»åŠ ç»éªŒå€¼è®¾ç½®
+    [Header("ç»éªŒå€¼è®¾ç½®")]
+    public int expValue = 10; // å‡»è´¥åè·å¾—çš„ç»éªŒå€¼ï¼ˆå¯è°ƒæ•´ï¼‰
+    public string expSourceType = "Enemy"; // ç»éªŒæ¥æºç±»å‹
+    [Header("è¡€é‡è®¾ç½®")]
+    public float maxHP = 100f; // æœ€å¤§è¡€é‡
+    public float currentHP;    // å½“å‰è¡€é‡
+    public bool isDead = false; // æ˜¯å¦æ­»äº¡
 
-    [Header("ÊÜÉËĞ§¹û")]
-    public Color damageColor = Color.red; // ÊÜÉËÊ±ÑÕÉ«
-    public float damageFlashDuration = 0.1f; // ÊÜÉËÉÁË¸Ê±¼ä
-    private SpriteRenderer spriteRenderer; // ¾«ÁéäÖÈ¾Æ÷
-    private Color originalColor; // Ô­Ê¼ÑÕÉ«
+    [Header("å—ä¼¤æ•ˆæœ")]
+    public Color damageColor = Color.red; // å—ä¼¤æ—¶é¢œè‰²
+    public float damageFlashDuration = 0.1f; // å—ä¼¤é—ªçƒæ—¶é—´
+    private SpriteRenderer spriteRenderer; // ç²¾çµæ¸²æŸ“å™¨
+    private Color originalColor; // åŸå§‹é¢œè‰²
 
-    [Header("ËÀÍöÉèÖÃ")]
-    public GameObject deathEffect; // ËÀÍöÌØĞ§
-    public float destroyDelay = 2f; // ËÀÍöºóÏú»ÙÑÓ³Ù
-    public string deathTriggerName = "Die"; // ËÀÍö¶¯»­´¥·¢Æ÷Ãû³Æ
+    [Header("æ­»äº¡è®¾ç½®")]
+    public GameObject deathEffect; // æ­»äº¡ç‰¹æ•ˆ
+    public float destroyDelay = 2f; // æ­»äº¡åé”€æ¯å»¶è¿Ÿ
+    public string deathTriggerName = "Die"; // æ­»äº¡åŠ¨ç”»è§¦å‘å™¨åç§°
 
-    [Header("ÒÆ¶¯ÉèÖÃ")]
+    [Header("ç§»åŠ¨è®¾ç½®")]
     public Transform target;
     public float enemyMoveSpeed;
     public float followDistance;
 
-    [Header("¹¥»÷ÉèÖÃ")]
-    public float attackDistance; // ¹¥»÷´¥·¢µÄ¾àÀë
-    public float attackDamage;   // ¹¥»÷ÉËº¦
-    public float attackCooldown; // ¹¥»÷ÀäÈ´Ê±¼ä
-    private float lastAttackTime; // ÉÏÒ»´Î¹¥»÷µÄÊ±¼ä
-    public float attackDelay = 0.5f; // ĞÂÔö£º¹¥»÷¶¯»­ÑÓ³ÙÊ±¼ä
+    [Header("æ”»å‡»è®¾ç½®")]
+    public float attackDistance; // æ”»å‡»è§¦å‘çš„è·ç¦»
+    public float attackDamage;   // æ”»å‡»ä¼¤å®³
+    public float attackCooldown; // æ”»å‡»å†·å´æ—¶é—´
+    private float lastAttackTime; // ä¸Šä¸€æ¬¡æ”»å‡»çš„æ—¶é—´
+    public float attackDelay = 0.5f; // æ–°å¢ï¼šæ”»å‡»åŠ¨ç”»å»¶è¿Ÿæ—¶é—´
 
-    [Header("ÎïÆ·µôÂä")]
-    public GameObject[] dropItems; // ¿ÉÄÜµôÂäµÄÎïÆ·
-    public float dropChance = 0.5f; // µôÂä¸ÅÂÊ
+    [Header("ç‰©å“æ‰è½")]
+    public GameObject[] dropItems; // å¯èƒ½æ‰è½çš„ç‰©å“
+    public float dropChance = 0.5f; // æ‰è½æ¦‚ç‡
 
-    // ¶¯»­×é¼ş
+    // åŠ¨ç”»ç»„ä»¶
     private Animator animator;
     private bool isFollowingPlayer = false;
 
@@ -44,19 +48,19 @@ public class Enemy : MonoBehaviour
 
     void Start()
     {
-        // ³õÊ¼»¯ÑªÁ¿
+        // åˆå§‹åŒ–è¡€é‡
         currentHP = maxHP;
 
         rb = GetComponent<Rigidbody2D>();
 
-        // »ñÈ¡Ä¿±êÍæ¼Ò
+        // è·å–ç›®æ ‡ç©å®¶
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player != null)
         {
             target = player.transform;
         }
 
-        // »ñÈ¡×é¼ş
+        // è·å–ç»„ä»¶
         animator = GetComponent<Animator>();
         spriteRenderer = GetComponent<SpriteRenderer>();
 
@@ -65,46 +69,46 @@ public class Enemy : MonoBehaviour
             Debug.LogWarning("Animator component not found on " + gameObject.name);
         }
 
-        // ¼ÇÂ¼Ô­Ê¼ÑÕÉ«
+        // è®°å½•åŸå§‹é¢œè‰²
         if (spriteRenderer != null)
         {
             originalColor = spriteRenderer.color;
         }
 
-        // ³õÊ¼»¯¹¥»÷ÀäÈ´
-        lastAttackTime = -attackCooldown; // ³õÊ¼»¯Îª¿ÉÁ¢¼´¹¥»÷
+        // åˆå§‹åŒ–æ”»å‡»å†·å´
+        lastAttackTime = -attackCooldown; // åˆå§‹åŒ–ä¸ºå¯ç«‹å³æ”»å‡»
     }
 
     void Update()
     {
-        // Èç¹ûµĞÈËËÀÍö£¬²»Ö´ĞĞÈÎºÎÂß¼­
+        // å¦‚æœæ•Œäººæ­»äº¡ï¼Œä¸æ‰§è¡Œä»»ä½•é€»è¾‘
         if (isDead) return;
 
         FollowPlayer();
         UpdateAnimationState();
-        CheckAttack(); // ¼ì²âÊÇ·ñÂú×ã¹¥»÷Ìõ¼ş
+        CheckAttack(); // æ£€æµ‹æ˜¯å¦æ»¡è¶³æ”»å‡»æ¡ä»¶
     }
 
-    // ÊÜµ½ÉËº¦
+    // å—åˆ°ä¼¤å®³
     public void TakeDamage(float damage)
     {
         if (isDead) return;
 
-        // ¿ÛÑª
+        // æ‰£è¡€
         currentHP -= damage;
 
-        // ÊÜÉË·´À¡
+        // å—ä¼¤åé¦ˆ
         StartCoroutine(DamageFlash());
 
-        // ²¥·ÅÊÜÉË¶¯»­
+        // æ’­æ”¾å—ä¼¤åŠ¨ç”»
         if (animator != null)
         {
             animator.SetTrigger("Hurt");
         }
 
-        Debug.Log($"{gameObject.name} ÊÜµ½ {damage} µãÉËº¦£¬Ê£ÓàÑªÁ¿: {currentHP}");
+        Debug.Log($"{gameObject.name} å—åˆ° {damage} ç‚¹ä¼¤å®³ï¼Œå‰©ä½™è¡€é‡: {currentHP}");
 
-        // ¼ì²éÊÇ·ñËÀÍö
+        // æ£€æŸ¥æ˜¯å¦æ­»äº¡
         if (currentHP <= 0)
         {
             currentHP = 0;
@@ -112,7 +116,7 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    // ÊÜÉËÉÁË¸Ğ§¹û
+    // å—ä¼¤é—ªçƒæ•ˆæœ
     IEnumerator DamageFlash()
     {
         if (spriteRenderer != null)
@@ -123,45 +127,71 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    // ËÀÍö´¦Àí
+    // æ­»äº¡å¤„ç†
     void Die()
     {
         if (isDead) return;
 
         isDead = true;
 
-        // ²¥·ÅËÀÍö¶¯»­
+        // æ’­æ”¾æ­»äº¡åŠ¨ç”»
         if (animator != null)
         {
             animator.SetTrigger(deathTriggerName);
         }
 
-        // Í£Ö¹ÒÆ¶¯ºÍ¹¥»÷
+        // åœæ­¢ç§»åŠ¨å’Œæ”»å‡»
         enemyMoveSpeed = 0;
 
-        // ½ûÓÃÅö×²Ìå
+        // ç¦ç”¨ç¢°æ’ä½“
         Collider2D collider = GetComponent<Collider2D>();
         if (collider != null)
         {
             collider.enabled = false;
         }
 
-        // ²¥·ÅËÀÍöÌØĞ§
+        // æ’­æ”¾æ­»äº¡ç‰¹æ•ˆ
         if (deathEffect != null)
         {
             Instantiate(deathEffect, transform.position, Quaternion.identity);
         }
 
-        // ÎïÆ·µôÂä
+        // ç‰©å“æ‰è½
         DropItems();
+        // ========== æ–°å¢ï¼šç»™ç©å®¶æ·»åŠ ç»éªŒå€¼ ==========
+        GiveExperienceToPlayer();
+        // =========================================
 
-        Debug.Log($"{gameObject.name} ÒÑËÀÍö");
+        Debug.Log($"{gameObject.name} å·²æ­»äº¡");
 
-        // ÑÓ³ÙÏú»ÙµĞÈË
+        // å»¶è¿Ÿé”€æ¯æ•Œäºº
         Destroy(gameObject, destroyDelay);
     }
+    /// <summary>
+    /// ç»™ç©å®¶æ·»åŠ ç»éªŒå€¼
+    /// </summary>
+    void GiveExperienceToPlayer()
+    {
+        if (expValue <= 0) return;
 
-    // ÎïÆ·µôÂä
+        // æ–¹æ³•1ï¼šä½¿ç”¨ExperienceManagerï¼ˆæ¨èï¼‰
+        if (ExperienceManager.Instance != null)
+        {
+            ExperienceManager.Instance.AddExperience(expValue, expSourceType);
+            Debug.Log($"{gameObject.name} ä¸ºç©å®¶æä¾›äº† {expValue} ç‚¹ç»éªŒå€¼");
+        }
+        // æ–¹æ³•2ï¼šä½¿ç”¨LevelManagerï¼ˆå¤‡ç”¨æ–¹æ¡ˆï¼‰
+        else if (LevelManager.Instance != null)
+        {
+            LevelManager.Instance.AddExperience(expValue);
+            Debug.Log($"{gameObject.name} ä¸ºç©å®¶æä¾›äº† {expValue} ç‚¹ç»éªŒå€¼ï¼ˆé€šè¿‡LevelManagerï¼‰");
+        }
+        
+    }
+
+    
+
+    // ç‰©å“æ‰è½
     void DropItems()
     {
         if (dropItems.Length == 0) return;
@@ -177,7 +207,7 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    // ÖÎÁÆµĞÈË
+    // æ²»ç–—æ•Œäºº
     public void Heal(float healAmount)
     {
         if (isDead) return;
@@ -188,13 +218,13 @@ public class Enemy : MonoBehaviour
             currentHP = maxHP;
         }
 
-        Debug.Log($"{gameObject.name} »Ö¸´ÁË {healAmount} µãÑªÁ¿£¬µ±Ç°ÑªÁ¿: {currentHP}");
+        Debug.Log($"{gameObject.name} æ¢å¤äº† {healAmount} ç‚¹è¡€é‡ï¼Œå½“å‰è¡€é‡: {currentHP}");
     }
 
-    // ÒÔÏÂÎªÔ­ÓĞ´úÂë±£³Ö²»±ä£¬Ö»Ìí¼ÓisDead¼ì²é
+    // ä»¥ä¸‹ä¸ºåŸæœ‰ä»£ç ä¿æŒä¸å˜ï¼Œåªæ·»åŠ isDeadæ£€æŸ¥
     void FollowPlayer()
     {
-        // Èç¹ûÄ¿±ê²»´æÔÚ»òµĞÈËËÀÍö£¬²»¸úËæ
+        // å¦‚æœç›®æ ‡ä¸å­˜åœ¨æˆ–æ•Œäººæ­»äº¡ï¼Œä¸è·Ÿéš
         if (target == null || isDead) return;
 
         bool wasFollowing = isFollowingPlayer;
@@ -203,13 +233,13 @@ public class Enemy : MonoBehaviour
         {
             isFollowingPlayer = true;
 
-            // Ö»ÓĞ²»ÔÚ¹¥»÷×´Ì¬Ê±£¬²ÅÒÆ¶¯
+            // åªæœ‰ä¸åœ¨æ”»å‡»çŠ¶æ€æ—¶ï¼Œæ‰ç§»åŠ¨
             if (!IsAttacking())
             {
                 transform.position = Vector2.MoveTowards(transform.position, target.position, enemyMoveSpeed * Time.deltaTime);
             }
 
-            // ·­×ª³¯Ïò
+            // ç¿»è½¬æœå‘
             if (transform.position.x - target.position.x > 0)
                 transform.eulerAngles = new Vector3(0, 180, 0);
             if (transform.position.x - target.position.x < 0)
@@ -231,7 +261,7 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    // ¼ì²âÊÇ·ñÔÚ¹¥»÷×´Ì¬£¨ĞŞ¸ÄÎª¸ü×¼È·µÄ¼ì²â£©
+    // æ£€æµ‹æ˜¯å¦åœ¨æ”»å‡»çŠ¶æ€ï¼ˆä¿®æ”¹ä¸ºæ›´å‡†ç¡®çš„æ£€æµ‹ï¼‰
     bool IsAttacking()
     {
         if (animator == null) return false;
@@ -240,12 +270,12 @@ public class Enemy : MonoBehaviour
         return stateInfo.IsName("Attack") || stateInfo.IsTag("Attack");
     }
 
-    // ¼ì²â¹¥»÷Ìõ¼ş
+    // æ£€æµ‹æ”»å‡»æ¡ä»¶
     void CheckAttack()
     {
         if (target == null || isDead) return;
 
-        // Âú×ã£ºÔÚ¹¥»÷¾àÀëÄÚ + ²»ÔÚÀäÈ´ÖĞ + ²»ÊÇÕıÔÚ¹¥»÷µÄ×´Ì¬
+        // æ»¡è¶³ï¼šåœ¨æ”»å‡»è·ç¦»å†… + ä¸åœ¨å†·å´ä¸­ + ä¸æ˜¯æ­£åœ¨æ”»å‡»çš„çŠ¶æ€
         if (Vector2.Distance(transform.position, target.position) < attackDistance
             && Time.time >= lastAttackTime + attackCooldown
             && !IsAttacking())
@@ -254,55 +284,55 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    // ´¥·¢¹¥»÷£¨²¥·Å¶¯»­ + Ê©¼ÓÉËº¦£©
+    // è§¦å‘æ”»å‡»ï¼ˆæ’­æ”¾åŠ¨ç”» + æ–½åŠ ä¼¤å®³ï¼‰
     void TriggerAttack()
     {
         if (animator != null)
         {
-            animator.SetTrigger("Attack"); // ´¥·¢¹¥»÷¶¯»­
+            animator.SetTrigger("Attack"); // è§¦å‘æ”»å‡»åŠ¨ç”»
         }
-        lastAttackTime = Time.time; // ¼ÇÂ¼¹¥»÷Ê±¼ä£¬ÖØÖÃÀäÈ´
+        lastAttackTime = Time.time; // è®°å½•æ”»å‡»æ—¶é—´ï¼Œé‡ç½®å†·å´
 
-        // ÑÓ³ÙÖ´ĞĞÉËº¦£¬Óë¹¥»÷¶¯»­Í¬²½
+        // å»¶è¿Ÿæ‰§è¡Œä¼¤å®³ï¼Œä¸æ”»å‡»åŠ¨ç”»åŒæ­¥
         StartCoroutine(DealDamageAfterDelay());
     }
 
-    // ÑÓ³Ù¹¥»÷ÉËº¦
+    // å»¶è¿Ÿæ”»å‡»ä¼¤å®³
     IEnumerator DealDamageAfterDelay()
     {
-        yield return new WaitForSeconds(attackDelay); // µÈ´ı¹¥»÷¶¯»­²¥·Åµ½ÉËº¦Ö¡
+        yield return new WaitForSeconds(attackDelay); // ç­‰å¾…æ”»å‡»åŠ¨ç”»æ’­æ”¾åˆ°ä¼¤å®³å¸§
         DealDamage();
     }
 
-    // ¶ÔÍæ¼ÒÔì³ÉÉËº¦£¨¿ÉÒÔÔÚ¶¯»­ÊÂ¼şÖĞµ÷ÓÃ£¬»òÖ±½Óµ÷ÓÃ£©
+    // å¯¹ç©å®¶é€ æˆä¼¤å®³ï¼ˆå¯ä»¥åœ¨åŠ¨ç”»äº‹ä»¶ä¸­è°ƒç”¨ï¼Œæˆ–ç›´æ¥è°ƒç”¨ï¼‰
     void DealDamage()
     {
         if (target == null || isDead) return;
 
-        // ÉÔÎ¢·Å¿í¹¥»÷¾àÀë¼ì²â£¬È·±£¹¥»÷¶¯×÷µÄÁ¬¹áĞÔ
+        // ç¨å¾®æ”¾å®½æ”»å‡»è·ç¦»æ£€æµ‹ï¼Œç¡®ä¿æ”»å‡»åŠ¨ä½œçš„è¿è´¯æ€§
         if (Vector2.Distance(transform.position, target.position) < attackDistance * 1.2f)
         {
-            // »ñÈ¡PlayerAction×é¼ş²¢µ÷ÓÃTakeDamage·½·¨
+            // è·å–PlayerActionç»„ä»¶å¹¶è°ƒç”¨TakeDamageæ–¹æ³•
             PlayerAction playerAction = target.GetComponent<PlayerAction>();
             if (playerAction != null)
             {
                 playerAction.TakeDamage(attackDamage);
-                Debug.Log($"{gameObject.name} ¹¥»÷Íæ¼Ò£¬Ôì³É {attackDamage} µãÉËº¦");
+                Debug.Log($"{gameObject.name} æ”»å‡»ç©å®¶ï¼Œé€ æˆ {attackDamage} ç‚¹ä¼¤å®³");
             }
             else
             {
-                Debug.LogWarning("Ä¿±êÃ»ÓĞPlayerAction×é¼ş£¡");
+                Debug.LogWarning("ç›®æ ‡æ²¡æœ‰PlayerActionç»„ä»¶ï¼");
             }
         }
     }
 
-    // »ñÈ¡µ±Ç°ÑªÁ¿°Ù·Ö±È
+    // è·å–å½“å‰è¡€é‡ç™¾åˆ†æ¯”
     public float GetHealthPercentage()
     {
         return currentHP / maxHP;
     }
 
-    // ¼ì²éµĞÈËÊÇ·ñ´æ»î
+    // æ£€æŸ¥æ•Œäººæ˜¯å¦å­˜æ´»
     public bool IsAlive()
     {
         return !isDead && currentHP > 0;

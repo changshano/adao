@@ -30,6 +30,11 @@ public class LevelUpUI : MonoBehaviour
     
     [Header("音效")]
     [SerializeField] private AudioClip levelUpSound;
+
+    private int pendingLevel = 1;
+    private int pendingSkillPoints = 0;
+    private int pendingAttributePoints = 0;
+    private bool hasPendingLevelUp = false;
     
     private CanvasGroup canvasGroup;
     private AudioSource audioSource;
@@ -120,15 +125,43 @@ public class LevelUpUI : MonoBehaviour
     /// 显示升级界面
     /// </summary>
     public void ShowLevelUp(int newLevel, int skillPoints, int attributePoints)
+{
+    // 如果有正在显示的升级，或者有等待处理的升级，则累计奖励
+    if (isShowing || hasPendingLevelUp)
     {
-        if (isShowing) return;
+        pendingLevel = newLevel;
+        pendingSkillPoints += skillPoints;
+        pendingAttributePoints += attributePoints;
+        hasPendingLevelUp = true;
         
-        currentLevel = newLevel;
-        skillPointsReward = skillPoints;
-        attributePointsReward = attributePoints;
-        
-        StartCoroutine(ShowLevelUpCoroutine());
+        // 如果正在显示，更新当前显示的UI
+        if (isShowing)
+        {
+            UpdateUITextWithPending();
+        }
+        return;
     }
+    
+    // 没有正在显示的升级，正常处理
+    currentLevel = newLevel;
+    skillPointsReward = skillPoints;
+    attributePointsReward = attributePoints;
+    
+    StartCoroutine(ShowLevelUpCoroutine());
+}
+// 添加处理待定升级的方法
+private void UpdateUITextWithPending()
+{
+    if (levelText != null)
+    {
+        levelText.text = $"LEVEL UP!\n<size=72>Lv. {pendingLevel}</size>";
+    }
+    
+    if (rewardsText != null)
+    {
+        rewardsText.text = $"获得奖励:\n技能点: {pendingSkillPoints}\n属性点: {pendingAttributePoints}";
+    }
+}
     
     public void ShowLevelUpUI(int newLevel)
     {
@@ -141,61 +174,50 @@ public class LevelUpUI : MonoBehaviour
     }
     
     private IEnumerator ShowLevelUpCoroutine()
+{
+    isShowing = true;
+    
+    yield return new WaitForSeconds(showDelay);
+    
+    // 播放音效
+    if (levelUpSound != null && audioSource != null)
     {
-        isShowing = true;
-        
-        yield return new WaitForSeconds(showDelay);
-        
-        // 播放音效
-        if (levelUpSound != null && audioSource != null)
-        {
-            audioSource.PlayOneShot(levelUpSound);
-        }
-        
-        // 更新文本
-        UpdateUIText();
-        
-        // 显示主面板
-        levelUpPanel.SetActive(true);
-        canvasGroup.alpha = 0f;
-        
-        // 淡入动画
-        float elapsedTime = 0f;
-        while (elapsedTime < panelFadeTime)
-        {
-            canvasGroup.alpha = Mathf.Lerp(0f, 1f, elapsedTime / panelFadeTime);
-            elapsedTime += Time.deltaTime;
-            yield return null;
-        }
-        canvasGroup.alpha = 1f;
-        
-        // 更新属性值显示
-        UpdateAttributeValues();
-        
-        // 如果有属性点，显示属性升级面板
-        //if (attributePointsReward > 0 && attributeUpgradePanel != null)
-        //{
-           // yield return new WaitForSeconds(0.5f);
-           // attributeUpgradePanel.SetActive(true);
-            //UpdateAttributePointsDisplay(attributePointsReward);
-        //}
-        
-        // 暂停游戏
-        Time.timeScale = 0f;
+        audioSource.PlayOneShot(levelUpSound);
     }
     
-    private void UpdateUIText()
+    // 更新文本（使用当前值，可能已被待定更新）
+    UpdateUIText();
+    
+    // 显示主面板
+    levelUpPanel.SetActive(true);
+    canvasGroup.alpha = 0f;
+    
+    // 淡入动画
+    float elapsedTime = 0f;
+    while (elapsedTime < panelFadeTime)
     {
-        if (levelText != null)
-        {
-            levelText.text = $"LEVEL UP!\n<size=72>Lv. {currentLevel}</size>";
-        }
-        
-        if (rewardsText != null)
-        {
-            rewardsText.text = $"获得奖励:\n技能点: {skillPointsReward}\n属性点: {attributePointsReward}";
-        }
+        canvasGroup.alpha = Mathf.Lerp(0f, 1f, elapsedTime / panelFadeTime);
+        elapsedTime += Time.deltaTime;
+        yield return null;
     }
+    canvasGroup.alpha = 1f;
+    
+    // 更新属性值显示
+    UpdateAttributeValues();
+}
+    
+    private void UpdateUIText()
+{
+    if (levelText != null)
+    {
+        levelText.text = $"LEVEL UP!\n<size=72>Lv. {currentLevel}</size>";
+    }
+    
+    if (rewardsText != null)
+    {
+        rewardsText.text = $"获得奖励:\n技能点: {skillPointsReward}\n属性点: {attributePointsReward}";
+    }
+}
     
     /// <summary>
     /// 属性升级按钮点击事件
@@ -287,15 +309,33 @@ public class LevelUpUI : MonoBehaviour
     /// 隐藏界面
     /// </summary>
     public void Hide()
+{
+    if (!isShowing) return;
+    
+    // 恢复游戏时间
+    Time.timeScale = 1f;
+    
+    // 检查是否有待定升级
+    if (hasPendingLevelUp)
     {
-        if (!isShowing) return;
+        // 处理待定升级
+        currentLevel = pendingLevel;
+        skillPointsReward = pendingSkillPoints;
+        attributePointsReward = pendingAttributePoints;
         
-        // 恢复游戏时间
-        Time.timeScale = 1f;
+        // 重置待定状态
+        hasPendingLevelUp = false;
+        pendingSkillPoints = 0;
+        pendingAttributePoints = 0;
         
-        // 淡出动画
-        StartCoroutine(FadeOutAndHide());
+        // 立即显示下一次升级
+        StartCoroutine(ShowLevelUpCoroutine());
+        return;
     }
+    
+    // 没有待定升级，正常隐藏
+    StartCoroutine(FadeOutAndHide());
+}
     
     private IEnumerator FadeOutAndHide()
     {
