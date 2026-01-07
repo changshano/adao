@@ -685,13 +685,26 @@ public void OpenPanel()
         }
         else if (attribute == "attack")
         {
+            // 升级后立即重新获取总攻击力（基础+装备加成）
+            float newTotalAttack = GetPlayerTotalAttack();
+            float newBaseAttack = LevelManager.Instance != null ? 
+                LevelManager.Instance.GetAttributeFloat("attack") : newTotalAttack;
+            float equipmentBonus = playerAction != null ? 
+                playerAction.GetEquipmentAttackBonus() : 0f;
+            
+            // 更新显示值
+            attackData.currentValue = newTotalAttack;  // 显示总攻击力
+            attackData.nextValue = newBaseAttack + 2f + equipmentBonus; // 下一级=新基础值+装备加成
+            
+            // 更新行显示
             row.UpdateValues(attackData.currentValue, attackData.nextValue, upgradeCost, canUpgrade);
             
-            // 注意：攻击力升级已经通过LevelManager处理了基础值
-            // 装备加成保持不变，所以总攻击力会自动更新
+            // 更新文本显示（如果有单独的文本）
+            UpdateAttributeDisplay();
+            
             if (playerAction != null)
             {
-                Debug.Log($"攻击力升级完成 - 基础攻击力: {playerAction.GetBaseAttackDamage()}, 装备加成: {playerAction.GetEquipmentAttackBonus()}, 总攻击力: {playerAction.GetTotalAttackDamage()}");
+                Debug.Log($"攻击力升级完成 - 基础攻击力: {newBaseAttack}, 装备加成: {equipmentBonus}, 总攻击力: {newTotalAttack}");
             }
         }
     }
@@ -914,35 +927,44 @@ public void OpenPanel()
     #region 属性升级
     
     private void OnUpgradeAttribute(string attributeId)
+{
+    if (LevelManager.Instance != null)
     {
-        if (LevelManager.Instance != null)
+        // 升级前记录当前总攻击力（如果是攻击力升级）
+        float beforeTotalAttack = attributeId == "attack" ? GetPlayerTotalAttack() : 0f;
+        
+        // 通过LevelManager升级属性
+        bool success = LevelManager.Instance.UpgradeAttribute(attributeId, 1);
+        
+        if (success)
         {
-            // 通过LevelManager升级属性
-            bool success = LevelManager.Instance.UpgradeAttribute(attributeId, 1);
-            
-            if (success)
+            if (attributeId == "attack")
             {
-                if (debugMode && showDebugLogs)
-                {
-                    Debug.Log($"[AttributePanelManager] 升级属性: {attributeId}");
-                }
+                // 升级后立即更新显示
+                UpdateAttackDisplayAfterUpgrade();
             }
-            else
+            
+            if (debugMode && showDebugLogs)
             {
-                PlaySound(notEnoughPointsSound);
-                
-                if (debugMode && showDebugLogs)
-                {
-                    Debug.Log($"[AttributePanelManager] 无法升级属性: {attributeId}");
-                }
+                Debug.Log($"[AttributePanelManager] 升级属性: {attributeId}");
             }
         }
         else
         {
-            // 调试模式下的模拟升级
-            SimulateUpgrade(attributeId);
+            PlaySound(notEnoughPointsSound);
+            
+            if (debugMode && showDebugLogs)
+            {
+                Debug.Log($"[AttributePanelManager] 无法升级属性: {attributeId}");
+            }
         }
     }
+    else
+    {
+        // 调试模式下的模拟升级
+        SimulateUpgrade(attributeId);
+    }
+}
     
     private void SimulateUpgrade(string attributeId)
     {
@@ -1017,15 +1039,12 @@ private void RefreshAttributesFromPlayer()
         
         if (debugMode && showDebugLogs)
         {
-            Debug.Log($"[AttributePanelManager] 从LevelManager刷新属性: 生命={healthData.currentValue}, 攻击={attackData.currentValue} (基础={baseAttack}, 装备加成={equipmentBonus}, 下一级={attackData.nextValue})");
+            Debug.Log($"[AttributePanelManager] 刷新属性: 生命={healthData.currentValue}, 攻击={attackData.currentValue} (基础={baseAttack}, 装备加成={equipmentBonus}, 下一级={attackData.nextValue})");
         }
     }
     else if (playerAction != null)
     {
         // 备用方案：直接获取总攻击力
-        playerAction = FindObjectOfType<PlayerAction>();
-        if (playerAction == null) return;
-        
         healthData.currentValue = playerAction.maxHealth;
         healthData.nextValue = healthData.currentValue + 5f;
         
@@ -1044,6 +1063,40 @@ private void RefreshAttributesFromPlayer()
         Debug.LogWarning("[AttributePanelManager] 无法刷新属性，LevelManager和PlayerAction都未找到");
     }
 }
+private void UpdateAttackDisplayAfterUpgrade()
+{
+    // 立即重新获取总攻击力
+    float newTotalAttack = GetPlayerTotalAttack();
+    
+    // 更新数据
+    attackData.currentValue = newTotalAttack;
+    
+    // 更新UI行显示
+    if (attributeRowDict.TryGetValue("attack", out AttributeRowUI row))
+    {
+        int upgradeCost = 1;
+        bool canUpgrade = currentAttributePoints >= upgradeCost;
+        
+        // 计算下一级值
+        float baseAttack = LevelManager.Instance != null ? 
+            LevelManager.Instance.GetAttributeFloat("attack") : newTotalAttack;
+        float equipmentBonus = newTotalAttack - baseAttack;
+        attackData.nextValue = baseAttack + 2f + equipmentBonus;
+        
+        row.UpdateValues(attackData.currentValue, attackData.nextValue, upgradeCost, canUpgrade);
+    }
+    
+    // 更新单独的文本显示
+    UpdateAttributeDisplay();
+    
+    if (debugMode)
+    {
+        float baseAttack = LevelManager.Instance != null ? 
+            LevelManager.Instance.GetAttributeFloat("attack") : newTotalAttack;
+        float equipmentBonus = newTotalAttack - baseAttack;
+        Debug.Log($"[升级后显示] 总攻击力: {newTotalAttack} (基础: {baseAttack}, 装备: {equipmentBonus})");
+    }
+}
 /// <summary>
 /// 获取玩家总攻击力（基础攻击力 + 装备加成）
 /// </summary>
@@ -1052,13 +1105,52 @@ private float GetPlayerTotalAttack()
     if (playerAction == null) 
     {
         playerAction = FindObjectOfType<PlayerAction>();
-        if (playerAction == null) return attackData.currentValue;
+        if (playerAction == null) 
+        {
+            Debug.LogWarning("找不到PlayerAction，返回当前显示值");
+            return attackData.currentValue;
+        }
     }
     
     try
     {
-        // 直接使用PlayerAction的AttackDamage属性，它已经包含了装备加成
-        return playerAction.AttackDamage;
+        // 首先尝试获取总攻击力
+        float totalAttack = 0f;
+        
+        // 尝试获取总攻击力（包含装备）
+        var getTotalMethod = typeof(PlayerAction).GetMethod("GetTotalAttackDamage");
+        if (getTotalMethod != null)
+        {
+            totalAttack = (float)getTotalMethod.Invoke(playerAction, null);
+        }
+        // 如果不行，尝试获取基础攻击力并加上装备加成
+        else
+        {
+            // 获取基础攻击力
+            var getBaseMethod = typeof(PlayerAction).GetMethod("GetBaseAttackDamage");
+            float baseAttack = 0f;
+            if (getBaseMethod != null)
+            {
+                baseAttack = (float)getBaseMethod.Invoke(playerAction, null);
+            }
+            
+            // 获取装备加成
+            var getEquipMethod = typeof(PlayerAction).GetMethod("GetEquipmentAttackBonus");
+            float equipmentBonus = 0f;
+            if (getEquipMethod != null)
+            {
+                equipmentBonus = (float)getEquipMethod.Invoke(playerAction, null);
+            }
+            
+            totalAttack = baseAttack + equipmentBonus;
+        }
+        
+        if (debugMode)
+        {
+            Debug.Log($"[GetPlayerTotalAttack] 总攻击力: {totalAttack}");
+        }
+        
+        return totalAttack;
     }
     catch (System.Exception e)
     {
