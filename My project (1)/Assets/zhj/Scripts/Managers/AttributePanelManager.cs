@@ -679,7 +679,7 @@ public void OpenPanel()
             {
                 playerAction.maxHealth = healthData.currentValue;
                 playerAction.currentHealth = healthData.currentValue; // 同时恢复满血
-                playerAction.UpdateHealthBar();
+                // playerAction.UpdateHealthBar();
                 Debug.Log($"已更新PlayerAction最大生命值: {healthData.currentValue}");
             }
         }
@@ -691,7 +691,7 @@ public void OpenPanel()
             // 装备加成保持不变，所以总攻击力会自动更新
             if (playerAction != null)
             {
-                Debug.Log($"攻击力升级完成 - 基础攻击力: {playerAction.GetBaseAttackDamage()}, 装备加成: {playerAction.GetEquipmentAttackBonus()}, 总攻击力: {playerAction.GetTotalAttackDamage()}");
+                // Debug.Log($"攻击力升级完成 - 基础攻击力: {playerAction.GetBaseAttackDamage()}, 装备加成: {playerAction.GetEquipmentAttackBonus()}, 总攻击力: {playerAction.GetTotalAttackDamage()}");
             }
         }
     }
@@ -966,7 +966,7 @@ public void OpenPanel()
                 playerAction.maxHealth = healthData.currentValue;
                 // 同时更新当前生命值到新的最大值
                 playerAction.currentHealth = healthData.currentValue;
-                playerAction.UpdateHealthBar();
+                // playerAction.UpdateHealthBar();
             }
         }
         else if (attributeId == "attack")
