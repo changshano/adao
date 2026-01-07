@@ -242,63 +242,159 @@ private void CreateDefaultLevelData()
         
         Debug.Log($"自动属性增长: 生命+{healthGain}, 攻击+{attackGain}, 防御+{defenseGain}");
     }
-    
     /// <summary>
-    /// 手动升级属性
-    /// </summary>
-    public bool UpgradeAttribute(string attributeName, int amount = 1)
+/// 获取属性值（支持float类型）
+/// </summary>
+public float GetAttributeFloat(string attributeName)
+{
+    return attributeName.ToLower() switch
     {
-        if (availableAttributePoints < amount) 
-        {
-            Debug.LogWarning($"属性点不足，需要{amount}点，当前{availableAttributePoints}点");
+        "health" or "hp" => (float)currentHealth,
+        "attack" or "atk" => (float)currentAttack,
+        "defense" or "def" => (float)currentDefense,
+        "stamina" or "sta" => (float)currentStamina,
+        _ => 0f
+    };
+}
+    // <summary>
+/// 升级属性（支持float类型）
+/// </summary>
+public bool UpgradeAttribute(string attributeName, int amount = 1)
+{
+    if (availableAttributePoints < amount) 
+    {
+        Debug.LogWarning($"属性点不足，需要{amount}点，当前{availableAttributePoints}点");
+        return false;
+    }
+    
+    float increaseAmount = 0f;
+    
+    switch (attributeName.ToLower())
+    {
+        case "health":
+            increaseAmount = amount * 5f;
+            baseHealth += (int)increaseAmount;
+            currentHealth += (int)increaseAmount;
+            break;
+        case "attack":
+            increaseAmount = amount * 1f;
+            baseAttack += (int)increaseAmount;
+            currentAttack += (int)increaseAmount;
+            break;
+        case "defense":
+            increaseAmount = amount * 1f;
+            baseDefense += (int)increaseAmount;
+            currentDefense += (int)increaseAmount;
+            break;
+        case "stamina":
+            increaseAmount = amount * 3f;
+            baseStamina += (int)increaseAmount;
+            currentStamina += (int)increaseAmount;
+            break;
+        default:
+            Debug.LogWarning($"未知属性: {attributeName}");
             return false;
+    }
+    
+    // 记录升级
+    if (!attributeUpgrades.ContainsKey(attributeName))
+        attributeUpgrades[attributeName] = 0;
+    attributeUpgrades[attributeName] += amount;
+    
+    availableAttributePoints -= amount;
+    
+    // 触发事件
+    onAttributeUpgraded?.Invoke(attributeName, (int)increaseAmount);
+    onAttributePointsChanged?.Invoke(availableAttributePoints);
+    
+    Debug.Log($"属性升级: {attributeName} +{increaseAmount}");
+    
+    // 立即更新PlayerAction
+    UpdatePlayerActionAttributes();
+    
+    return true;
+}
+    /// <summary>
+/// 更新PlayerAction的属性
+/// </summary>
+private void UpdatePlayerActionAttributes()
+{
+    PlayerAction playerAction = FindObjectOfType<PlayerAction>();
+    if (playerAction == null)
+    {
+        Debug.LogWarning("未找到PlayerAction，无法更新属性");
+        return;
+    }
+    
+    // 更新生命值
+    playerAction.maxHealth = currentHealth;
+    playerAction.currentHealth = currentHealth; // 同时更新当前生命值
+    
+    // 更新攻击力 - 使用更可靠的方法
+    UpdatePlayerAttackDamage(playerAction, currentAttack);
+    
+    playerAction.UpdateHealthBar();
+    
+    Debug.Log($"已更新PlayerAction: 生命={currentHealth}, 攻击={currentAttack}");
+}
+/// <summary>
+/// 更新玩家攻击力
+/// </summary>
+private void UpdatePlayerAttackDamage(PlayerAction player, int newAttack)
+{
+    try
+    {
+        // 方法1: 使用反射
+        var field = typeof(PlayerAction).GetField("baseAttackDamage", 
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        if (field != null)
+        {
+            field.SetValue(player, (float)newAttack);
+            Debug.Log($"通过反射设置基础攻击力: {newAttack}");
+            return;
         }
-        
-        int increaseAmount = 0;
-        
+        Debug.LogWarning("无法设置PlayerAction的基础攻击力，请检查PlayerAction的结构");
+    }
+    catch (System.Exception e)
+    {
+        Debug.LogError($"更新PlayerAction攻击力时出错: {e.Message}");
+    }
+}
+/// <summary>
+/// 获取当前属性值用于显示（考虑装备加成）
+/// </summary>
+public (float current, float next) GetAttributeDisplayValues(string attributeName)
+{
+    float current = GetAttributeFloat(attributeName);
+    float next = current;
+    
+    // 如果是攻击力，需要获取总攻击力
+    if (attributeName.ToLower() == "attack")
+    {
+        PlayerAction player = FindObjectOfType<PlayerAction>();
+        if (player != null)
+        {
+            current = player.GetTotalAttackDamage(); // 总攻击力
+            float baseCurrent = GetAttributeFloat(attributeName); // 基础攻击力
+            float equipmentBonus = current - baseCurrent; // 装备加成
+            next = baseCurrent + 2f + equipmentBonus; // 下一级包含装备加成
+        }
+    }
+    else
+    {
         switch (attributeName.ToLower())
         {
             case "health":
-                increaseAmount = amount * 5;
-                baseHealth += increaseAmount;
-                currentHealth += increaseAmount;
+                next = current + 5f;
                 break;
             case "attack":
-                increaseAmount = amount;
-                baseAttack += increaseAmount;
-                currentAttack += increaseAmount;
+                next = current + 2f;
                 break;
-            case "defense":
-                increaseAmount = amount;
-                baseDefense += increaseAmount;
-                currentDefense += increaseAmount;
-                break;
-            case "stamina":
-                increaseAmount = amount * 3;
-                baseStamina += increaseAmount;
-                currentStamina += increaseAmount;
-                break;
-            default:
-                Debug.LogWarning($"未知属性: {attributeName}");
-                return false;
         }
-        
-        // 记录升级
-        if (!attributeUpgrades.ContainsKey(attributeName))
-            attributeUpgrades[attributeName] = 0;
-        attributeUpgrades[attributeName] += amount;
-        
-        availableAttributePoints -= amount;
-        
-        // 触发事件
-        onAttributeUpgraded?.Invoke(attributeName, increaseAmount);
-        onAttributePointsChanged?.Invoke(availableAttributePoints);
-        
-        Debug.Log($"属性升级: {attributeName} +{increaseAmount}");
-        
-        return true;
     }
     
+    return (current, next);
+}
     /// <summary>
     /// 使用技能点
     /// </summary>

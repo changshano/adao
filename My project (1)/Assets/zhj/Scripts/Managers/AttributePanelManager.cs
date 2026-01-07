@@ -10,8 +10,8 @@ using UnityEngine.Events;
 public class AttributeData
 {
     public string attributeName;
-    public int currentValue;
-    public int nextValue;
+    public float currentValue;
+    public float nextValue;
     public Color color = Color.white;
     public Sprite icon;
 }
@@ -32,29 +32,24 @@ public class AttributePanelManager : MonoBehaviour
     [SerializeField] private Transform attributesContainer;
     [SerializeField] private GameObject attributeRowPrefab;
     
-    [Header("属性数据 - 根据图片显示有3个属性")]
+    [Header("玩家引用")]
+    [SerializeField] private PlayerAction playerAction;
+    
+    [Header("属性数据 - 只保留生命值和攻击力")]
     [SerializeField] private AttributeData healthData = new AttributeData
     {
-        attributeName = "生命值",
-        currentValue = 100,
-        nextValue = 105,
+        attributeName = "最大生命值",
+        currentValue = 100f,
+        nextValue = 105f,
         color = new Color(1f, 0.2f, 0.2f, 1f) // 红色
     };
     
     [SerializeField] private AttributeData attackData = new AttributeData
     {
         attributeName = "攻击力",
-        currentValue = 10,
-        nextValue = 12,
+        currentValue = 10f,
+        nextValue = 12f,
         color = new Color(1f, 0.5f, 0.2f, 1f) // 橙色
-    };
-    
-    [SerializeField] private AttributeData defenseData = new AttributeData
-    {
-        attributeName = "防御力",
-        currentValue = 5,
-        nextValue = 6,
-        color = new Color(0.2f, 0.6f, 1f, 1f) // 蓝色
     };
     
     [Header("键盘控制")]
@@ -118,13 +113,13 @@ public class AttributePanelManager : MonoBehaviour
         public Image backgroundImage;
         public string attributeId;
         
-        public void UpdateValues(int currentVal, int nextVal, int upgradeCost, bool canUpgrade)
+        public void UpdateValues(float currentVal, float nextVal, int upgradeCost, bool canUpgrade)
         {
             if (currentValueText != null)
-                currentValueText.text = currentVal.ToString();
+                currentValueText.text = currentVal.ToString("F1");
             
             if (nextValueText != null)
-                nextValueText.text = $"{nextVal}";
+                nextValueText.text = $"{nextVal:F1}";
             
             if (upgradeCostText != null)
                 upgradeCostText.text = upgradeCost > 0 ? $"{upgradeCost}点" : "MAX";
@@ -179,6 +174,16 @@ public class AttributePanelManager : MonoBehaviour
         if (attributePanel != null)
         {
             attributePanel.SetActive(false);
+        }
+        
+        // 查找PlayerAction引用
+        if (playerAction == null)
+        {
+            playerAction = FindObjectOfType<PlayerAction>();
+            if (playerAction != null && debugMode)
+            {
+                Debug.Log($"[AttributePanelManager] 找到PlayerAction: {playerAction.name}");
+            }
         }
     }
     
@@ -378,10 +383,9 @@ public class AttributePanelManager : MonoBehaviour
         attributeRows.Clear();
         attributeRowDict.Clear();
         
-        // 创建属性行
+        // 只创建生命值和攻击力行
         CreateAttributeRow("health", healthData);
         CreateAttributeRow("attack", attackData);
-        CreateAttributeRow("defense", defenseData);
         
         if (debugMode && showDebugLogs)
         {
@@ -497,33 +501,50 @@ public class AttributePanelManager : MonoBehaviour
     }
     
     private void OnAttributeUpgraded(string attribute, int amount)
+{
+    // 立即刷新属性数据
+    RefreshAttributesFromPlayer();
+    
+    // 更新对应的属性行
+    if (attributeRowDict.TryGetValue(attribute, out AttributeRowUI row))
     {
-        // 更新对应的属性行
-        if (attributeRowDict.TryGetValue(attribute, out AttributeRowUI row))
+        int upgradeCost = 1;
+        bool canUpgrade = currentAttributePoints >= upgradeCost;
+        
+        if (attribute == "health")
         {
-            // 更新属性数据
-            if (attribute == "health")
+            row.UpdateValues(healthData.currentValue, healthData.nextValue, upgradeCost, canUpgrade);
+            
+            // 更新PlayerAction的最大生命值
+            if (playerAction != null)
             {
-                healthData.currentValue = healthData.nextValue;
-                healthData.nextValue += 5; // 每次升级增加5
-                row.UpdateValues(healthData.currentValue, healthData.nextValue, 1, currentAttributePoints >= 1);
-            }
-            else if (attribute == "attack")
-            {
-                attackData.currentValue = attackData.nextValue;
-                attackData.nextValue += 2; // 每次升级增加2
-                row.UpdateValues(attackData.currentValue, attackData.nextValue, 1, currentAttributePoints >= 1);
-            }
-            else if (attribute == "defense")
-            {
-                defenseData.currentValue = defenseData.nextValue;
-                defenseData.nextValue += 1; // 每次升级增加1
-                row.UpdateValues(defenseData.currentValue, defenseData.nextValue, 1, currentAttributePoints >= 1);
+                playerAction.maxHealth = healthData.currentValue;
+                playerAction.currentHealth = healthData.currentValue; // 同时恢复满血
+                playerAction.UpdateHealthBar();
+                Debug.Log($"已更新PlayerAction最大生命值: {healthData.currentValue}");
             }
         }
-        
-        PlaySound(upgradeSound);
+        else if (attribute == "attack")
+        {
+            row.UpdateValues(attackData.currentValue, attackData.nextValue, upgradeCost, canUpgrade);
+            
+            // 注意：攻击力升级已经通过LevelManager处理了基础值
+            // 装备加成保持不变，所以总攻击力会自动更新
+            if (playerAction != null)
+            {
+                Debug.Log($"攻击力升级完成 - 基础攻击力: {playerAction.GetBaseAttackDamage()}, 装备加成: {playerAction.GetEquipmentAttackBonus()}, 总攻击力: {playerAction.GetTotalAttackDamage()}");
+            }
+        }
     }
+    
+    PlaySound(upgradeSound);
+    
+    if (debugMode && showDebugLogs)
+    {
+        Debug.Log($"[AttributePanelManager] 属性升级完成: {attribute}, 增加值: {amount}");
+    }
+}
+
     
     #endregion
     
@@ -561,10 +582,6 @@ public class AttributePanelManager : MonoBehaviour
             {
                 row.UpdateValues(attackData.currentValue, attackData.nextValue, upgradeCost, canUpgrade);
             }
-            else if (row.attributeId == "defense")
-            {
-                row.UpdateValues(defenseData.currentValue, defenseData.nextValue, upgradeCost, canUpgrade);
-            }
         }
     }
     
@@ -573,7 +590,10 @@ public class AttributePanelManager : MonoBehaviour
         foreach (var row in attributeRows)
         {
             bool canUpgrade = currentAttributePoints >= 1;
-            row.upgradeButton.interactable = canUpgrade;
+            if (row.upgradeButton != null)
+            {
+                row.upgradeButton.interactable = canUpgrade;
+            }
         }
     }
     
@@ -625,6 +645,9 @@ public class AttributePanelManager : MonoBehaviour
         {
             Debug.Log($"[AttributePanelManager] 正在打开属性面板...");
         }
+        
+        // 每次打开面板时从PlayerAction重新读取属性
+        RefreshAttributesFromPlayer();
         
         // 确保Canvas设置正确
         EnsureCanvasSetup();
@@ -825,17 +848,27 @@ public class AttributePanelManager : MonoBehaviour
         if (attributeId == "health")
         {
             healthData.currentValue = healthData.nextValue;
-            healthData.nextValue += 5;
+            healthData.nextValue += 5f;
+            
+            // 更新PlayerAction中的最大生命值
+            if (playerAction != null)
+            {
+                playerAction.maxHealth = healthData.currentValue;
+                // 同时更新当前生命值到新的最大值
+                playerAction.currentHealth = healthData.currentValue;
+                playerAction.UpdateHealthBar();
+            }
         }
         else if (attributeId == "attack")
         {
             attackData.currentValue = attackData.nextValue;
-            attackData.nextValue += 2;
-        }
-        else if (attributeId == "defense")
-        {
-            defenseData.currentValue = defenseData.nextValue;
-            defenseData.nextValue += 1;
+            attackData.nextValue += 2f;
+            
+            // 更新PlayerAction中的基础攻击力
+            if (playerAction != null)
+            {
+                SetPlayerBaseAttackDamage(attackData.currentValue);
+            }
         }
         
         // 更新UI
@@ -850,140 +883,319 @@ public class AttributePanelManager : MonoBehaviour
     
     #endregion
     
-    #region 音效
-    
-    private void PlaySound(AudioClip clip)
+    #region PlayerAction数据交互
+
+/// <summary>
+/// 从PlayerAction中刷新属性数据
+/// </summary>
+private void RefreshAttributesFromPlayer()
+{
+    if (LevelManager.Instance != null)
     {
-        if (clip != null && audioSource != null)
-        {
-            audioSource.PlayOneShot(clip, soundVolume);
-        }
-    }
-    
-    #endregion
-    
-    #region 公共方法
-    
-    /// <summary>
-    /// 添加属性点
-    /// </summary>
-    public void AddAttributePoints(int points)
-    {
-        currentAttributePoints += points;
-        UpdateAttributePointsDisplay();
-        UpdateAllRowsInteractable();
+        // 从LevelManager获取基础属性值
+        var healthValues = LevelManager.Instance.GetAttributeDisplayValues("health");
+        healthData.currentValue = healthValues.current;
+        healthData.nextValue = healthValues.next;
+        
+        // 攻击力需要读取总攻击力（基础+装备加成）
+        var attackValues = LevelManager.Instance.GetAttributeDisplayValues("attack");
+        float totalAttack = GetPlayerTotalAttack(); // 获取包含装备的总攻击力
+        float baseAttack = attackValues.current; // 基础攻击力
+        float equipmentBonus = totalAttack - baseAttack; // 装备加成
+        
+        attackData.currentValue = totalAttack; // 显示总攻击力
+        attackData.nextValue = attackValues.next + equipmentBonus; // 下一级也要包含装备加成
         
         if (debugMode && showDebugLogs)
         {
-            Debug.Log($"[AttributePanelManager] 添加属性点: {points}, 当前: {currentAttributePoints}");
+            Debug.Log($"[AttributePanelManager] 从LevelManager刷新属性: 生命={healthData.currentValue}, 攻击={attackData.currentValue} (基础={baseAttack}, 装备加成={equipmentBonus})");
         }
     }
-    
-    /// <summary>
-    /// 获取当前属性点
-    /// </summary>
-    public int GetAttributePoints()
+    else if (playerAction != null)
     {
-        return currentAttributePoints;
-    }
-    
-    /// <summary>
-    /// 强制打开面板（用于测试）
-    /// </summary>
-    [ContextMenu("强制打开面板")]
-    public void ForceOpenPanel()
-    {
-        OpenPanel();
-    }
-    
-    /// <summary>
-    /// 强制关闭面板（用于测试）
-    /// </summary>
-    [ContextMenu("强制关闭面板")]
-    public void ForceClosePanel()
-    {
-        ClosePanel();
-    }
-    
-    /// <summary>
-    /// 重置面板位置和层级
-    /// </summary>
-    [ContextMenu("重置面板层级")]
-    public void ResetPanelHierarchy()
-    {
-        if (attributeCanvas != null)
-        {
-            // 重置层级
-            attributeCanvas.sortingOrder = canvasSortOrder;
-            attributeCanvas.sortingLayerName = canvasSortingLayer;
-            
-            // 确保在Hierarchy最后
-            attributeCanvas.transform.SetAsLastSibling();
-            
-            Debug.Log($"[AttributePanelManager] 已重置面板层级: Sort Order = {canvasSortOrder}");
-        }
-    }
-    
-    /// <summary>
-    /// 测试添加属性点
-    /// </summary>
-    [ContextMenu("测试: 添加5点属性点")]
-    public void TestAddPoints()
-    {
-        AddAttributePoints(5);
-    }
-    
-    /// <summary>
-    /// 测试升级生命值
-    /// </summary>
-    [ContextMenu("测试: 升级生命值")]
-    public void TestUpgradeHealth()
-    {
-        OnUpgradeAttribute("health");
-    }
-    
-    /// <summary>
-    /// 打印面板状态
-    /// </summary>
-    [ContextMenu("打印面板状态")]
-    public void PrintPanelStatus()
-    {
-        Debug.Log($"=== 属性面板状态 ===");
-        Debug.Log($"面板打开: {isPanelOpen}");
-        Debug.Log($"当前属性点: {currentAttributePoints}");
-        Debug.Log($"Canvas排序: {canvasSortOrder}");
-        Debug.Log($"Canvas层级: {canvasSortingLayer}");
+        // 备用方案：从PlayerAction获取总攻击力
+        playerAction = FindObjectOfType<PlayerAction>();
+        if (playerAction == null) return;
         
-        if (attributeCanvas != null)
-        {
-            Debug.Log($"实际Canvas排序: {attributeCanvas.sortingOrder}");
-            Debug.Log($"实际Canvas层级: {attributeCanvas.sortingLayerName}");
-        }
+        healthData.currentValue = playerAction.maxHealth;
+        healthData.nextValue = healthData.currentValue + 5f;
         
-        Debug.Log($"面板激活: {attributePanel != null && attributePanel.activeSelf}");
-        Debug.Log($"CanvasGroup Alpha: {(canvasGroup != null ? canvasGroup.alpha : 0)}");
+        // 获取总攻击力（包含装备）
+        float totalAttack = GetPlayerTotalAttack();
+        attackData.currentValue = totalAttack;
+        attackData.nextValue = totalAttack + 2f;
+        
+        if (debugMode && showDebugLogs)
+        {
+            Debug.Log($"[AttributePanelManager] 从PlayerAction刷新属性: 生命={healthData.currentValue}, 攻击={attackData.currentValue}");
+        }
     }
-    
-    /// <summary>
-    /// 检查所有UI引用
-    /// </summary>
-    [ContextMenu("检查UI引用")]
-    public void CheckUIRefs()
+    else
     {
-        Debug.Log($"=== UI引用检查 ===");
-        Debug.Log($"属性面板: {attributePanel != null}");
-        Debug.Log($"属性Canvas: {attributeCanvas != null}");
-        Debug.Log($"属性点文本: {attributePointsText != null}");
-        Debug.Log($"属性容器: {attributesContainer != null}");
-        Debug.Log($"属性行预制体: {attributeRowPrefab != null}");
-        Debug.Log($"CanvasGroup: {canvasGroup != null}");
-        
-        if (attributeCanvas != null)
-        {
-            Debug.Log($"Canvas Sort Order: {attributeCanvas.sortingOrder}");
-            Debug.Log($"Canvas Sorting Layer: {attributeCanvas.sortingLayerName}");
-        }
+        Debug.LogWarning("[AttributePanelManager] 无法刷新属性，LevelManager和PlayerAction都未找到");
     }
-    
-    #endregion
 }
+/// <summary>
+/// 获取玩家总攻击力（基础攻击力 + 装备加成）
+/// </summary>
+private float GetPlayerTotalAttack()
+{
+    if (playerAction == null) 
+    {
+        playerAction = FindObjectOfType<PlayerAction>();
+        if (playerAction == null) return attackData.currentValue;
+    }
+    
+    try
+    {
+        // 直接使用PlayerAction的AttackDamage属性，它已经包含了装备加成
+        return playerAction.AttackDamage;
+    }
+    catch (System.Exception e)
+    {
+        Debug.LogWarning($"获取玩家总攻击力时出错: {e.Message}");
+        return attackData.currentValue;
+    }
+}
+private void SetPlayerBaseAttackDamage(float newDamage)
+{
+    // 现在通过LevelManager统一管理，这个方法可以保留为空或删除
+    if (debugMode)
+    {
+        Debug.Log($"[AttributePanelManager] 攻击力更新已通过LevelManager处理: {newDamage}");
+    }
+}
+private float GetPlayerCurrentAttack()
+{
+    if (playerAction == null) return attackData.currentValue;
+    
+    try
+    {
+        // 尝试多种方式获取攻击力
+        var method = typeof(PlayerAction).GetMethod("GetTotalAttackDamage");
+        if (method != null)
+        {
+            return (float)method.Invoke(playerAction, null);
+        }
+        
+        var property = typeof(PlayerAction).GetProperty("baseAttackDamage");
+        if (property != null && property.CanRead)
+        {
+            return (float)property.GetValue(playerAction);
+        }
+        
+        var field = typeof(PlayerAction).GetField("baseAttackDamage", 
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        if (field != null)
+        {
+            return (float)field.GetValue(playerAction);
+        }
+    }
+    catch (System.Exception e)
+    {
+        Debug.LogWarning($"获取PlayerAction攻击力时出错: {e.Message}");
+    }
+    
+    return attackData.currentValue;
+}
+
+
+#endregion
+
+#region 音效
+
+private void PlaySound(AudioClip clip)
+{
+    if (clip != null && audioSource != null)
+    {
+        audioSource.PlayOneShot(clip, soundVolume);
+    }
+}
+
+#endregion
+
+#region 公共方法
+
+/// <summary>
+/// 添加属性点
+/// </summary>
+public void AddAttributePoints(int points)
+{
+    currentAttributePoints += points;
+    UpdateAttributePointsDisplay();
+    UpdateAllRowsInteractable();
+    
+    if (debugMode && showDebugLogs)
+    {
+        Debug.Log($"[AttributePanelManager] 添加属性点: {points}, 当前: {currentAttributePoints}");
+    }
+}
+
+/// <summary>
+/// 获取当前属性点
+/// </summary>
+public int GetAttributePoints()
+{
+    return currentAttributePoints;
+}
+
+/// <summary>
+/// 设置PlayerAction引用
+/// </summary>
+public void SetPlayerAction(PlayerAction player)
+{
+    playerAction = player;
+    if (playerAction != null && debugMode)
+    {
+        Debug.Log($"[AttributePanelManager] 已设置PlayerAction: {playerAction.name}");
+    }
+}
+
+/// <summary>
+/// 强制打开面板（用于测试）
+/// </summary>
+[ContextMenu("强制打开面板")]
+public void ForceOpenPanel()
+{
+    OpenPanel();
+}
+
+/// <summary>
+/// 强制关闭面板（用于测试）
+/// </summary>
+[ContextMenu("强制关闭面板")]
+public void ForceClosePanel()
+{
+    ClosePanel();
+}
+
+/// <summary>
+/// 重置面板位置和层级
+/// </summary>
+[ContextMenu("重置面板层级")]
+public void ResetPanelHierarchy()
+{
+    if (attributeCanvas != null)
+    {
+        // 重置层级
+        attributeCanvas.sortingOrder = canvasSortOrder;
+        attributeCanvas.sortingLayerName = canvasSortingLayer;
+        
+        // 确保在Hierarchy最后
+        attributeCanvas.transform.SetAsLastSibling();
+        
+        Debug.Log($"[AttributePanelManager] 已重置面板层级: Sort Order = {canvasSortOrder}");
+    }
+}
+
+/// <summary>
+/// 测试添加属性点
+/// </summary>
+[ContextMenu("测试: 添加5点属性点")]
+public void TestAddPoints()
+{
+    AddAttributePoints(5);
+}
+
+/// <summary>
+/// 测试升级生命值
+/// </summary>
+[ContextMenu("测试: 升级生命值")]
+public void TestUpgradeHealth()
+{
+    OnUpgradeAttribute("health");
+}
+
+/// <summary>
+/// 测试升级攻击力
+/// </summary>
+[ContextMenu("测试: 升级攻击力")]
+public void TestUpgradeAttack()
+{
+    OnUpgradeAttribute("attack");
+}
+
+/// <summary>
+/// 打印面板状态
+/// </summary>
+[ContextMenu("打印面板状态")]
+public void PrintPanelStatus()
+{
+    Debug.Log($"=== 属性面板状态 ===");
+    Debug.Log($"面板打开: {isPanelOpen}");
+    Debug.Log($"当前属性点: {currentAttributePoints}");
+    Debug.Log($"Canvas排序: {canvasSortOrder}");
+    Debug.Log($"Canvas层级: {canvasSortingLayer}");
+    
+    if (attributeCanvas != null)
+    {
+        Debug.Log($"实际Canvas排序: {attributeCanvas.sortingOrder}");
+        Debug.Log($"实际Canvas层级: {attributeCanvas.sortingLayerName}");
+    }
+    
+    Debug.Log($"面板激活: {attributePanel != null && attributePanel.activeSelf}");
+    Debug.Log($"CanvasGroup Alpha: {(canvasGroup != null ? canvasGroup.alpha : 0)}");
+    
+    if (playerAction != null)
+    {
+        Debug.Log($"PlayerAction引用: {playerAction.name}");
+        Debug.Log($"玩家最大生命值: {playerAction.maxHealth}");
+        Debug.Log($"玩家当前生命值: {playerAction.GetCurrentHealth()}");
+        Debug.Log($"玩家基础攻击力: {playerAction.GetBaseAttackDamage()}");
+        Debug.Log($"玩家总攻击力: {playerAction.GetTotalAttackDamage()}");
+    }
+}
+
+/// <summary>
+/// 检查所有UI引用
+/// </summary>
+[ContextMenu("检查UI引用")]
+public void CheckUIRefs()
+{
+    Debug.Log($"=== UI引用检查 ===");
+    Debug.Log($"属性面板: {attributePanel != null}");
+    Debug.Log($"属性Canvas: {attributeCanvas != null}");
+    Debug.Log($"属性点文本: {attributePointsText != null}");
+    Debug.Log($"属性容器: {attributesContainer != null}");
+    Debug.Log($"属性行预制体: {attributeRowPrefab != null}");
+    Debug.Log($"CanvasGroup: {canvasGroup != null}");
+    Debug.Log($"PlayerAction引用: {playerAction != null}");
+    
+    if (attributeCanvas != null)
+    {
+        Debug.Log($"Canvas Sort Order: {attributeCanvas.sortingOrder}");
+        Debug.Log($"Canvas Sorting Layer: {attributeCanvas.sortingLayerName}");
+    }
+}
+
+/// <summary>
+/// 刷新属性显示（外部调用）
+/// </summary>
+public void RefreshAttributeDisplay()
+{
+    RefreshAttributesFromPlayer();
+    UpdateAllDisplays();
+    
+    if (debugMode && showDebugLogs)
+    {
+        Debug.Log($"[AttributePanelManager] 已手动刷新属性显示");
+    }
+}
+// 添加一个专门的方法用于装备更新后刷新面板
+public void RefreshOnEquipmentChange()
+{
+    if (isPanelOpen)
+    {
+        RefreshAttributesFromPlayer();
+        UpdateAllDisplays();
+        
+        if (debugMode && showDebugLogs)
+        {
+            Debug.Log($"[AttributePanelManager] 装备变更后刷新属性面板");
+        }
+    }
+}
+}
+
+
+#endregion
