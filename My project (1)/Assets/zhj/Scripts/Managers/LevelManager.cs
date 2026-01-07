@@ -333,7 +333,7 @@ private void UpdatePlayerActionAttributes()
     // 更新攻击力 - 使用更可靠的方法
     UpdatePlayerAttackDamage(playerAction, currentAttack);
     
-    playerAction.UpdateHealthBar();
+    // playerAction.UpdateHealthBar();
     
     Debug.Log($"已更新PlayerAction: 生命={currentHealth}, 攻击={currentAttack}");
 }
