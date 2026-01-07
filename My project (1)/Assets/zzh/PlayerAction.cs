@@ -397,7 +397,7 @@ public class PlayerAction : MonoBehaviour
         return actualHealed;
     }
 
-    void UpdateHealthBar()
+    public void UpdateHealthBar()
     {
         if (healthBarImage == null)
         {
@@ -423,6 +423,33 @@ public class PlayerAction : MonoBehaviour
             healthBarImage.color = Color.green;
         }
     }
+    /// <summary>
+/// 获取装备攻击力加成
+/// </summary>
+public float GetEquipmentAttackBonus()
+{
+    return equipmentAttackBonus;
+}
+public void SetBaseAttackDamage(float newBaseDamage)
+{
+    // 保存当前装备加成
+    float currentBonus = equipmentAttackBonus;
+    
+    // 设置新基础值
+    baseAttackDamage = newBaseDamage;
+    
+    // 重新应用装备加成
+    equipmentAttackBonus = currentBonus;
+    
+    Debug.Log($"设置基础攻击力: {newBaseDamage}, 装备加成: {currentBonus}, 总攻击力: {AttackDamage}");
+}
+/// <summary>
+/// 获取当前装备加成
+/// </summary>
+public float GetCurrentEquipmentBonus()
+{
+    return currentEquipmentBonus;
+}
 
     void FindHealthBar()
     {

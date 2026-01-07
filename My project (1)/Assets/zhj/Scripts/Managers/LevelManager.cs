@@ -277,9 +277,16 @@ public bool UpgradeAttribute(string attributeName, int amount = 1)
             currentHealth += (int)increaseAmount;
             break;
         case "attack":
+            // 获取当前总攻击力（包含装备加成）
+            float currentTotalAttack = GetPlayerTotalAttack();
             increaseAmount = amount * 1f;
-            baseAttack += (int)increaseAmount;
-            currentAttack += (int)increaseAmount;
+            
+            // 只升级基础攻击力，但要考虑当前总攻击力
+            float baseIncrease = increaseAmount;
+            baseAttack += (int)baseIncrease;
+            currentAttack += (int)baseIncrease;
+            
+            Debug.Log($"攻击力升级: 基础值+{baseIncrease}, 当前总攻击力={currentTotalAttack + baseIncrease}");
             break;
         case "defense":
             increaseAmount = amount * 1f;
@@ -314,6 +321,15 @@ public bool UpgradeAttribute(string attributeName, int amount = 1)
     
     return true;
 }
+private float GetPlayerTotalAttack()
+{
+    PlayerAction player = FindObjectOfType<PlayerAction>();
+    if (player != null)
+    {
+        return player.GetTotalAttackDamage();
+    }
+    return currentAttack;
+}
     /// <summary>
 /// 更新PlayerAction的属性
 /// </summary>
@@ -326,16 +342,25 @@ private void UpdatePlayerActionAttributes()
         return;
     }
     
+    // 保存当前的装备加成
+    float currentEquipmentBonus = playerAction.GetEquipmentAttackBonus();
+    
     // 更新生命值
     playerAction.maxHealth = currentHealth;
-    playerAction.currentHealth = currentHealth; // 同时更新当前生命值
+    playerAction.currentHealth = currentHealth;
     
-    // 更新攻击力 - 使用更可靠的方法
+    // 更新攻击力 - 只更新基础值，保留装备加成
     UpdatePlayerAttackDamage(playerAction, currentAttack);
+    
+    // 重新应用装备加成
+    if (currentEquipmentBonus > 0)
+    {
+        playerAction.ApplyAttackBonus(currentEquipmentBonus);
+    }
     
     playerAction.UpdateHealthBar();
     
-    Debug.Log($"已更新PlayerAction: 生命={currentHealth}, 攻击={currentAttack}");
+    Debug.Log($"已更新PlayerAction: 生命={currentHealth}, 攻击={playerAction.GetTotalAttackDamage()} (基础={currentAttack}, 装备加成={currentEquipmentBonus})");
 }
 /// <summary>
 /// 更新玩家攻击力
@@ -365,23 +390,22 @@ private void UpdatePlayerAttackDamage(PlayerAction player, int newAttack)
 /// </summary>
 public (float current, float next) GetAttributeDisplayValues(string attributeName)
 {
-    float current = GetAttributeFloat(attributeName);
-    float next = current;
-    
-    // 如果是攻击力，需要获取总攻击力
     if (attributeName.ToLower() == "attack")
     {
-        PlayerAction player = FindObjectOfType<PlayerAction>();
-        if (player != null)
-        {
-            current = player.GetTotalAttackDamage(); // 总攻击力
-            float baseCurrent = GetAttributeFloat(attributeName); // 基础攻击力
-            float equipmentBonus = current - baseCurrent; // 装备加成
-            next = baseCurrent + 2f + equipmentBonus; // 下一级包含装备加成
-        }
+        // 攻击力特殊处理：显示总攻击力，升级只影响基础值
+        float baseCurrent = GetAttributeFloat(attributeName);
+        float totalCurrent = GetPlayerTotalAttack();
+        float equipmentBonus = totalCurrent - baseCurrent;
+        float baseNext = baseCurrent + 2f; // 基础值增加
+        float totalNext = baseNext + equipmentBonus; // 下一级总攻击力
+        
+        return (totalCurrent, totalNext);
     }
     else
     {
+        float current = GetAttributeFloat(attributeName);
+        float next = current;
+        
         switch (attributeName.ToLower())
         {
             case "health":
@@ -391,9 +415,9 @@ public (float current, float next) GetAttributeDisplayValues(string attributeNam
                 next = current + 2f;
                 break;
         }
+        
+        return (current, next);
     }
-    
-    return (current, next);
 }
     /// <summary>
     /// 使用技能点
