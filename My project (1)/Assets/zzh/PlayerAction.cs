@@ -228,24 +228,32 @@ public class PlayerAction : MonoBehaviour
 
     void AttackEnemies()
     {
-        // 如果没有设置攻击点，使用角色的位置
         Vector2 attackPosition = attackPoint != null ? attackPoint.position : transform.position;
-
-        // 检测攻击范围内的敌人
         Collider2D[] hitEnemies = Physics2D.OverlapCircleAll(attackPosition, attackRange, enemyLayer);
 
         Debug.Log($"检测到 {hitEnemies.Length} 个敌人");
 
         bool hitAnyEnemy = false;
+
         foreach (Collider2D enemyCollider in hitEnemies)
         {
+            // 先尝试检测普通小怪
             Enemy enemy = enemyCollider.GetComponent<Enemy>();
             if (enemy != null && !enemy.isDead)
             {
-                // 改为使用 AttackDamage 属性
                 enemy.TakeDamage(AttackDamage);
                 hitAnyEnemy = true;
-                Debug.Log($"使用攻击力 {AttackDamage} 攻击敌人: {enemy.name}");
+                Debug.Log($"攻击小怪: {enemy.name}, 造成 {AttackDamage} 伤害");
+                continue; // 处理完就继续下一个
+            }
+
+            // 再尝试检测Boss
+            BossController boss = enemyCollider.GetComponent<BossController>();
+            if (boss != null && !boss.isDead)
+            {
+                boss.TakeDamage(AttackDamage);
+                hitAnyEnemy = true;
+                Debug.Log($"攻击Boss: {boss.name}, 造成 {AttackDamage} 伤害");
             }
         }
 
