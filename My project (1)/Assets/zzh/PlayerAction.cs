@@ -35,17 +35,13 @@ public class PlayerAction : MonoBehaviour
     [Header("基础属性")]
     [SerializeField] private float baseAttackDamage = 10f;  // 基础攻击力
     private float equipmentAttackBonus = 0f;  // 装备攻击力加成
+    private float currentEquipmentBonus = 0f;  // 当前装备的加成
     [Header("攻击设置")]
     public Transform attackPoint;
     public float attackRange = 1.5f;
     public LayerMask enemyLayer;
     public float attackDelay = 0.3f;
     private bool isAttacking = false;
-    // 计算总攻击力
-    public float AttackDamage
-    {
-        get { return baseAttackDamage + equipmentAttackBonus; }
-    }
 
     [Header("二段跳设置")]
     private int jumpCount = 0;
@@ -86,11 +82,25 @@ public class PlayerAction : MonoBehaviour
         Debug.Log($"阿岛血量初始化: {currentHealth}/{maxHealth}");
     }
 
+    // 计算总攻击力
+    public float AttackDamage
+    {
+        get { return baseAttackDamage + equipmentAttackBonus; }
+    }
+
     // 应用攻击力加成
     public void ApplyAttackBonus(float bonus)
     {
+        // 先移除当前的装备加成
+        if (currentEquipmentBonus > 0)
+        {
+            equipmentAttackBonus -= currentEquipmentBonus;
+        }
+
+        // 应用新的加成
+        currentEquipmentBonus = bonus;
         equipmentAttackBonus += bonus;
-        Debug.Log($"攻击力加成: {bonus}, 当前总攻击力: {AttackDamage}");
+        Debug.Log($"应用装备攻击力加成: {bonus}, 当前总攻击力: {AttackDamage}");
     }
 
     // 移除攻击力加成
@@ -98,6 +108,13 @@ public class PlayerAction : MonoBehaviour
     {
         equipmentAttackBonus -= reduction;
         if (equipmentAttackBonus < 0) equipmentAttackBonus = 0;
+
+        // 如果移除的是当前装备的加成，清空currentEquipmentBonus
+        if (Mathf.Approximately(reduction, currentEquipmentBonus))
+        {
+            currentEquipmentBonus = 0f;
+        }
+
         Debug.Log($"移除攻击力加成: {reduction}, 当前总攻击力: {AttackDamage}");
     }
 

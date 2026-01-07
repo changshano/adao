@@ -134,17 +134,19 @@ public class InventoryUI : MonoBehaviour
                 ItemSO oldWeapon = equipmentUI.currentWeapon;
 
                 // 装备新武器
-                equipmentUI.EquipWeapon(itemSO);
+                bool success = equipmentUI.EquipWeapon(itemSO);
 
-                // 从背包移除新武器
-                Destroy(itemUI.gameObject);
-                InventoryManager.Instance.RemoveItem(itemSO);
-
-                // 如果之前有装备武器，将其放回背包
-                if (oldWeapon != null)
+                if (success)
                 {
-                    // 注意：这里使用 AddItem 会同时更新数据和UI
-                    InventoryManager.Instance.AddItem(oldWeapon);
+                    // 从背包移除新武器
+                    Destroy(itemUI.gameObject);
+                    InventoryManager.Instance.RemoveItem(itemSO);
+
+                    // 如果之前有装备，放回背包
+                    if (oldWeapon != null)
+                    {
+                        InventoryManager.Instance.AddItem(oldWeapon);
+                    }
                 }
 
                 Debug.Log($"装备完成");
@@ -191,6 +193,9 @@ public class InventoryUI : MonoBehaviour
                 {
                     InventoryManager.Instance.RemoveItem(itemSO);
                 }
+
+                // 自动关闭背包
+                AutoCloseInventory();
             }
             else
             {
@@ -205,6 +210,32 @@ public class InventoryUI : MonoBehaviour
         }
     }
 
+    // 自动关闭背包
+    private void AutoCloseInventory()
+    {
+        // 延迟一帧关闭背包，确保其他逻辑先执行完毕
+        StartCoroutine(CloseInventoryWithDelay());
+    }
+    IEnumerator CloseInventoryWithDelay()
+    {
+        // 等待一帧
+        yield return null;
+
+        // 关闭背包
+        Hide();
+        isShow = false;
+
+        Debug.Log("使用可消耗品后自动关闭背包");
+
+        /*
+        // 可选：播放关闭音效
+        if (audioSource != null && closeSound != null)
+        {
+            audioSource.PlayOneShot(closeSound);
+        }
+        */
+    }
+
     // 显示治疗效果提示
     private void ShowHealEffect(float healAmount)
     {
@@ -216,18 +247,54 @@ public class InventoryUI : MonoBehaviour
 
             // 创建治疗效果文字
             GameObject healText = new GameObject("HealText");
-            healText.transform.position = playerPosition + Vector3.up * 2f;
+            healText.transform.position = playerPosition + Vector3.up * 1f;  // 初始高度降低
 
+            // 添加 TextMesh 组件
             TextMesh textMesh = healText.AddComponent<TextMesh>();
             textMesh.text = $"+{healAmount} HP";
-            textMesh.fontSize = 20;
-            textMesh.color = Color.green;
+            textMesh.fontSize = healTextFontSize;  // 使用配置的字体大小
+            textMesh.color = healTextColor;  // 使用配置的颜色
             textMesh.anchor = TextAnchor.MiddleCenter;
+            textMesh.alignment = TextAlignment.Center;
+
+            // 添加字符间距和字体样式
+            textMesh.characterSize = 0.1f;  // 字符大小
+            textMesh.fontStyle = FontStyle.Bold;  // 粗体
+
+            // 添加描边效果（通过创建多个TextMesh层叠）
+            AddTextOutline(healText, healAmount);
 
             // 添加浮动动画
             StartCoroutine(FloatHealText(healText));
         }
     }
+
+    // 添加文字描边效果
+private void AddTextOutline(GameObject parentText, float healAmount)
+{
+    // 创建4个方向偏移的文本作为描边
+    Vector3[] offsets = {
+        new Vector3(0.01f, 0.01f, 0),  // 右上
+        new Vector3(0.01f, -0.01f, 0), // 右下
+        new Vector3(-0.01f, 0.01f, 0), // 左上
+        new Vector3(-0.01f, -0.01f, 0) // 左下
+    };
+    
+    foreach (Vector3 offset in offsets)
+    {
+        GameObject outlineText = new GameObject("Outline");
+        outlineText.transform.SetParent(parentText.transform);
+        outlineText.transform.localPosition = offset;
+        
+        TextMesh outlineMesh = outlineText.AddComponent<TextMesh>();
+        outlineMesh.text = $"+{healAmount} HP";
+        outlineMesh.fontSize = healTextFontSize;
+        outlineMesh.color = Color.black;  // 描边用黑色
+        outlineMesh.anchor = TextAnchor.MiddleCenter;
+        outlineMesh.alignment = TextAlignment.Center;
+        outlineMesh.characterSize = 0.1f;
+    }
+}
 
     IEnumerator FloatHealText(GameObject textObject)
     {
