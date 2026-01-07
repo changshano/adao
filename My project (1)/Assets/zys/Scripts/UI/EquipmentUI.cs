@@ -64,11 +64,12 @@ public class EquipmentUI : MonoBehaviour
         // 获取旧的装备武器
         ItemSO oldWeapon = currentWeapon;
 
-        // 第一步：先移除旧装备的属性
-        if (oldWeapon != null)
+        // 第一步：移除旧装备的属性
+        if (currentWeapon != null)
         {
-            Debug.Log($"移除旧装备属性: {oldWeapon.name}");
-            RemoveEquipmentAttributes(oldWeapon);  // 移除特定装备的属性
+            Debug.Log($"卸下旧装备: {currentWeapon.name}");
+            // 只移除当前装备的加成，不全部清空
+            RemoveCurrentEquipmentBonus();
         }
 
         // 第二步：更新当前装备
@@ -89,6 +90,34 @@ public class EquipmentUI : MonoBehaviour
 
         Debug.Log($"=== 装备完成 ===");
         return true;
+    }
+
+    // 新增方法：移除当前装备的加成
+    private void RemoveCurrentEquipmentBonus()
+    {
+        if (currentWeapon == null || playerController == null) return;
+
+        float attackBonus = GetWeaponAttackBonus(currentWeapon);
+        if (attackBonus > 0)
+        {
+            playerController.RemoveAttackBonus(attackBonus);
+        }
+    }
+
+    // 新增方法：获取武器的攻击力加成
+    private float GetWeaponAttackBonus(ItemSO weapon)
+    {
+        if (weapon == null) return 0f;
+
+        float total = 0f;
+        foreach (ItemProperty property in weapon.propertyList)
+        {
+            if (property.propertyType == ItemPropertyType.AttackValue)
+            {
+                total += property.value;
+            }
+        }
+        return total;
     }
 
     // 卸下武器的方法

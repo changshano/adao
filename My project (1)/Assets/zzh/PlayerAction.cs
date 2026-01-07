@@ -35,17 +35,13 @@ public class PlayerAction : MonoBehaviour
     [Header("基础属性")]
     [SerializeField] private float baseAttackDamage = 10f;  // 基础攻击力
     private float equipmentAttackBonus = 0f;  // 装备攻击力加成
+    private float currentEquipmentBonus = 0f;  // 当前装备的加成
     [Header("攻击设置")]
     public Transform attackPoint;
     public float attackRange = 1.5f;
     public LayerMask enemyLayer;
     public float attackDelay = 0.3f;
     private bool isAttacking = false;
-    // 计算总攻击力
-    public float AttackDamage
-    {
-        get { return baseAttackDamage + equipmentAttackBonus; }
-    }
 
     [Header("二段跳设置")]
     private int jumpCount = 0;
@@ -86,11 +82,25 @@ public class PlayerAction : MonoBehaviour
         Debug.Log($"阿岛血量初始化: {currentHealth}/{maxHealth}");
     }
 
+    // 计算总攻击力
+    public float AttackDamage
+    {
+        get { return baseAttackDamage + equipmentAttackBonus; }
+    }
+
     // 应用攻击力加成
     public void ApplyAttackBonus(float bonus)
     {
+        // 先移除当前的装备加成
+        if (currentEquipmentBonus > 0)
+        {
+            equipmentAttackBonus -= currentEquipmentBonus;
+        }
+
+        // 应用新的加成
+        currentEquipmentBonus = bonus;
         equipmentAttackBonus += bonus;
-        Debug.Log($"攻击力加成: {bonus}, 当前总攻击力: {AttackDamage}");
+        Debug.Log($"应用装备攻击力加成: {bonus}, 当前总攻击力: {AttackDamage}");
     }
 
     // 移除攻击力加成
@@ -98,6 +108,13 @@ public class PlayerAction : MonoBehaviour
     {
         equipmentAttackBonus -= reduction;
         if (equipmentAttackBonus < 0) equipmentAttackBonus = 0;
+
+        // 如果移除的是当前装备的加成，清空currentEquipmentBonus
+        if (Mathf.Approximately(reduction, currentEquipmentBonus))
+        {
+            currentEquipmentBonus = 0f;
+        }
+
         Debug.Log($"移除攻击力加成: {reduction}, 当前总攻击力: {AttackDamage}");
     }
 
@@ -228,24 +245,32 @@ public class PlayerAction : MonoBehaviour
 
     void AttackEnemies()
     {
-        // 如果没有设置攻击点，使用角色的位置
         Vector2 attackPosition = attackPoint != null ? attackPoint.position : transform.position;
-
-        // 检测攻击范围内的敌人
         Collider2D[] hitEnemies = Physics2D.OverlapCircleAll(attackPosition, attackRange, enemyLayer);
 
         Debug.Log($"检测到 {hitEnemies.Length} 个敌人");
 
         bool hitAnyEnemy = false;
+
         foreach (Collider2D enemyCollider in hitEnemies)
         {
+            // 先尝试检测普通小怪
             Enemy enemy = enemyCollider.GetComponent<Enemy>();
             if (enemy != null && !enemy.isDead)
             {
-                // 改为使用 AttackDamage 属性
                 enemy.TakeDamage(AttackDamage);
                 hitAnyEnemy = true;
-                Debug.Log($"使用攻击力 {AttackDamage} 攻击敌人: {enemy.name}");
+                Debug.Log($"攻击小怪: {enemy.name}, 造成 {AttackDamage} 伤害");
+                continue; // 处理完就继续下一个
+            }
+
+            // 再尝试检测Boss
+            BossController boss = enemyCollider.GetComponent<BossController>();
+            if (boss != null && !boss.isDead)
+            {
+                boss.TakeDamage(AttackDamage);
+                hitAnyEnemy = true;
+                Debug.Log($"攻击Boss: {boss.name}, 造成 {AttackDamage} 伤害");
             }
         }
 
@@ -345,9 +370,11 @@ public class PlayerAction : MonoBehaviour
         StartCoroutine(DestroyAfterDeath());
     }
 
-    public void Heal(float healAmount)
+    public float Heal(float healAmount)
     {
-        if (isDead) return;
+        if (isDead) return 0f;
+
+        float healthBefore = currentHealth;
 
         currentHealth += healAmount;
         if (currentHealth > maxHealth)
@@ -355,8 +382,19 @@ public class PlayerAction : MonoBehaviour
             currentHealth = maxHealth;
         }
 
+        float actualHealed = currentHealth - healthBefore;
+
         UpdateHealthBar();
-        Debug.Log($"阿岛恢复了 {healAmount} 点血量，当前血量: {currentHealth}");
+
+        // 播放治疗特效（如果有）
+        if (actualHealed > 0)
+        {
+            playerAnim.SetTrigger("heal");
+        }
+
+        Debug.Log($"阿岛恢复了 {actualHealed} 点血量，当前血量: {currentHealth}/{maxHealth}");
+
+        return actualHealed;
     }
 
     void UpdateHealthBar()
