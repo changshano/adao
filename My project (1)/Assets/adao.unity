@@ -1611,7 +1611,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 2036195893}
   m_HandleRect: {fileID: 2036195892}
   m_Direction: 2
-  m_Value: 1
+  m_Value: 0.9999998
   m_Size: 0.5821044
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -2828,6 +2828,7 @@ MonoBehaviour:
   attributePointsText: {fileID: 657901671}
   attributesContainer: {fileID: 2134076322}
   attributeRowPrefab: {fileID: 0}
+  playerAction: {fileID: 0}
   healthData:
     attributeName: "\u751F\u547D\u503C"
     currentValue: 100
@@ -2839,12 +2840,6 @@ MonoBehaviour:
     currentValue: 10
     nextValue: 12
     color: {r: 1, g: 0.5, b: 0.2, a: 1}
-    icon: {fileID: 0}
-  defenseData:
-    attributeName: "\u9632\u5FA1\u529B"
-    currentValue: 5
-    nextValue: 6
-    color: {r: 0.2, g: 0.6, b: 1, a: 1}
     icon: {fileID: 0}
   toggleKey: 118
   toggleCooldown: 0.3
@@ -7759,7 +7754,7 @@ Transform:
   m_GameObject: {fileID: 1072158026}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -1, z: 0, w: 0}
-  m_LocalPosition: {x: 24.3477, y: -237.441, z: 0}
+  m_LocalPosition: {x: 24.52, y: -236.44, z: 0}
   m_LocalScale: {x: 3.0019333, y: 3.0019333, z: 3.0019333}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -46975,6 +46970,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemPrefab: {fileID: 1672346410}
   itemDetailUI: {fileID: 867873233}
+  healTextFontSize: 12
+  healTextDuration: 2.5
+  healTextFloatHeight: 1.5
+  healTextColor: {r: 0, g: 1, b: 0, a: 1}
 --- !u!1 &1741954687
 GameObject:
   m_ObjectHideFlags: 0
@@ -49064,7 +49063,7 @@ Transform:
   m_GameObject: {fileID: 1978813103}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 11.22, y: -235.55, z: 0}
+  m_LocalPosition: {x: 3.85, y: -206.69, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
