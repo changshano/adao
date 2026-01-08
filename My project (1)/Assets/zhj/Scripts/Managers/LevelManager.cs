@@ -7,7 +7,7 @@ public class LevelManager : MonoBehaviour
 {
     [Header("特殊等级事件")]
     public UnityEvent<int> onSpecialLevelReached; // 参数：达到的特殊等级
-    [SerializeField] private int[] specialLevels = { 3, 20, 30, 50, 100 }; // 特殊等级数组
+    [SerializeField] private int[] specialLevels = { 5, 20, 30, 50, 100 }; // 特殊等级数组
 
     [Header("配置引用")]
     [SerializeField] private LevelDataSO levelData;
@@ -230,12 +230,12 @@ public string GetSpecialLevelMessage(int level)
 {
     return level switch
     {
-        10 => "恭喜！你已达到10级！\n解锁新的技能和能力！",
-        20 => "里程碑！达到20级！\n你已经成为一名经验丰富的冒险者！",
-        30 => "惊人！30级达成！\n你的力量正在觉醒！",
-        50 => "传奇！50级成就！\n你已经是传说中的英雄！",
-        100 => "神话！100级巅峰！\n你已成为不朽的传奇！",
-        _ => $"恭喜达到 {level} 级！"
+        //10 => "恭喜！你已达到10级！\n解锁新的技能和能力！",
+        //20 => "里程碑！达到20级！\n你已经成为一名经验丰富的冒险者！",
+        //30 => "惊人！30级达成！\n你的力量正在觉醒！",
+        //50 => "传奇！50级成就！\n你已经是传说中的英雄！",
+        //100 => "神话！100级巅峰！\n你已成为不朽的传奇！",
+        //_ => $"恭喜达到 {level} 级！"
     };
 }
     /// <summary>

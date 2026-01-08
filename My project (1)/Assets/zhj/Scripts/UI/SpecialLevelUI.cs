@@ -140,7 +140,7 @@ public class SpecialLevelUI : MonoBehaviour
     {
         if (specialLevelText != null)
         {
-            specialLevelText.text = $"等级里程碑！\n<size=72>Lv. {level}</size>";
+            //specialLevelText.text = $"等级里程碑！\n<size=72>Lv. {level}</size>";
         }
         
         if (messageText != null && LevelManager.Instance != null)
