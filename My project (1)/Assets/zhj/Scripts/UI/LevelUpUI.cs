@@ -1,8 +1,8 @@
-// LevelUpUI.cs
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections;
+using System.Collections.Generic;
 
 public class LevelUpUI : MonoBehaviour
 {
@@ -21,20 +21,20 @@ public class LevelUpUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI attributePointsText;
     [SerializeField] private TextMeshProUGUI healthValueText;
     [SerializeField] private TextMeshProUGUI attackValueText;
-    [SerializeField] private TextMeshProUGUI defenseValueText;
     [SerializeField] private TextMeshProUGUI staminaValueText;
+    
+    [Header("等级5特殊面板")]
+    [SerializeField] private GameObject level5SpecialPanel;
+    [SerializeField] private float specialPanelShowTime = 3f;
+    [SerializeField] private AudioClip level5SpecialSound;
     
     [Header("动画设置")]
     [SerializeField] private float showDelay = 1f;
     [SerializeField] private float panelFadeTime = 0.5f;
+    [SerializeField] private float autoHideDelay = 2f; 
     
     [Header("音效")]
     [SerializeField] private AudioClip levelUpSound;
-
-    private int pendingLevel = 1;
-    private int pendingSkillPoints = 0;
-    private int pendingAttributePoints = 0;
-    private bool hasPendingLevelUp = false;
     
     private CanvasGroup canvasGroup;
     private AudioSource audioSource;
@@ -42,6 +42,32 @@ public class LevelUpUI : MonoBehaviour
     private int currentLevel = 1;
     private int skillPointsReward = 1;
     private int attributePointsReward = 3;
+    private Coroutine autoHideCoroutine;
+    
+    // 队列相关变量
+    private Queue<LevelUpData> levelUpQueue = new Queue<LevelUpData>();
+    private bool isProcessingLevelUp = false;
+    
+    // 记录上次处理的等级，避免重复
+    private int lastProcessedLevel = 0;
+    
+    // 新增：记录是否已经显示过等级5特殊面板
+    private bool hasShownLevel5Special = false;
+    
+    // 升级数据结构
+    private struct LevelUpData
+    {
+        public int level;
+        public int skillPoints;
+        public int attributePoints;
+        
+        public LevelUpData(int lv, int sp, int ap)
+        {
+            level = lv;
+            skillPoints = sp;
+            attributePoints = ap;
+        }
+    }
     
     private void Awake()
     {
@@ -50,7 +76,6 @@ public class LevelUpUI : MonoBehaviour
     
     private void InitializeComponents()
     {
-        // 获取或添加组件
         canvasGroup = levelUpPanel.GetComponent<CanvasGroup>();
         if (canvasGroup == null)
         {
@@ -63,7 +88,6 @@ public class LevelUpUI : MonoBehaviour
             audioSource = gameObject.AddComponent<AudioSource>();
         }
         
-        // 初始隐藏
         if (levelUpPanel != null)
         {
             levelUpPanel.SetActive(false);
@@ -74,7 +98,12 @@ public class LevelUpUI : MonoBehaviour
             attributeUpgradePanel.SetActive(false);
         }
         
-        // 绑定按钮事件
+        // 初始化等级5特殊面板
+        if (level5SpecialPanel != null)
+        {
+            level5SpecialPanel.SetActive(false);
+        }
+        
         InitializeButtons();
     }
     
@@ -85,7 +114,6 @@ public class LevelUpUI : MonoBehaviour
             closeButton.onClick.AddListener(Hide);
         }
         
-        // 绑定属性升级按钮
         if (healthButton != null)
         {
             healthButton.onClick.AddListener(() => OnAttributeUpgrade("health"));
@@ -109,7 +137,6 @@ public class LevelUpUI : MonoBehaviour
     
     private void Start()
     {
-        // 注册事件监听
         if (LevelManager.Instance != null)
         {
             LevelManager.Instance.onLevelUpDetailed.AddListener(ShowLevelUp);
@@ -125,43 +152,43 @@ public class LevelUpUI : MonoBehaviour
     /// 显示升级界面
     /// </summary>
     public void ShowLevelUp(int newLevel, int skillPoints, int attributePoints)
-{
-    // 如果有正在显示的升级，或者有等待处理的升级，则累计奖励
-    if (isShowing || hasPendingLevelUp)
     {
-        pendingLevel = newLevel;
-        pendingSkillPoints += skillPoints;
-        pendingAttributePoints += attributePoints;
-        hasPendingLevelUp = true;
-        
-        // 如果正在显示，更新当前显示的UI
-        if (isShowing)
+        // 检查是否已经处理过这个等级
+        if (newLevel <= lastProcessedLevel)
         {
-            UpdateUITextWithPending();
+            Debug.Log($"跳过已处理的等级: {newLevel}, 上次处理的等级: {lastProcessedLevel}");
+            return;
         }
-        return;
+        
+        // 创建升级数据
+        LevelUpData levelUpData = new LevelUpData(newLevel, skillPoints, attributePoints);
+        
+        // 如果正在显示，加入队列
+        if (isShowing || isProcessingLevelUp)
+        {
+            // 检查队列中是否已有相同或更高等级的数据
+            bool shouldEnqueue = true;
+            foreach (var data in levelUpQueue)
+            {
+                if (data.level >= newLevel)
+                {
+                    shouldEnqueue = false;
+                    Debug.Log($"跳过加入队列，已有更高或相同等级: {data.level}");
+                    break;
+                }
+            }
+            
+            if (shouldEnqueue)
+            {
+                levelUpQueue.Enqueue(levelUpData);
+                Debug.Log($"升级事件加入队列: 等级 {newLevel}, 队列长度: {levelUpQueue.Count}");
+            }
+            return;
+        }
+        
+        // 直接处理升级
+        ProcessLevelUp(levelUpData);
     }
-    
-    // 没有正在显示的升级，正常处理
-    currentLevel = newLevel;
-    skillPointsReward = skillPoints;
-    attributePointsReward = attributePoints;
-    
-    StartCoroutine(ShowLevelUpCoroutine());
-}
-// 添加处理待定升级的方法
-private void UpdateUITextWithPending()
-{
-    if (levelText != null)
-    {
-        levelText.text = $"LEVEL UP!\n<size=72>Lv. {pendingLevel}</size>";
-    }
-    
-    if (rewardsText != null)
-    {
-        rewardsText.text = $"获得奖励:\n技能点: {pendingSkillPoints}\n属性点: {pendingAttributePoints}";
-    }
-}
     
     public void ShowLevelUpUI(int newLevel)
     {
@@ -173,51 +200,125 @@ private void UpdateUITextWithPending()
         ShowLevelUp(newLevel, skillPoints, attributePoints);
     }
     
+    /// <summary>
+    /// 处理升级数据
+    /// </summary>
+    private void ProcessLevelUp(LevelUpData data)
+    {
+        // 更新最后处理的等级
+        lastProcessedLevel = data.level;
+        
+        currentLevel = data.level;
+        skillPointsReward = data.skillPoints;
+        attributePointsReward = data.attributePoints;
+        
+        isProcessingLevelUp = true;
+        StartCoroutine(ShowLevelUpCoroutine());
+    }
+    
     private IEnumerator ShowLevelUpCoroutine()
-{
-    isShowing = true;
-    
-    yield return new WaitForSeconds(showDelay);
-    
-    // 播放音效
-    if (levelUpSound != null && audioSource != null)
     {
-        audioSource.PlayOneShot(levelUpSound);
+        isShowing = true;
+        
+        yield return new WaitForSeconds(showDelay);
+        
+        if (levelUpSound != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(levelUpSound);
+        }
+        
+        UpdateUIText();
+        
+        levelUpPanel.SetActive(true);
+        canvasGroup.alpha = 0f;
+        
+        float elapsedTime = 0f;
+        while (elapsedTime < panelFadeTime)
+        {
+            canvasGroup.alpha = Mathf.Lerp(0f, 1f, elapsedTime / panelFadeTime);
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+        canvasGroup.alpha = 1f;
+        
+        UpdateAttributeValues();
+        
+        isProcessingLevelUp = false;
+        
+        Debug.Log($"显示升级界面: 等级 {currentLevel}");
+        
+        
+        
+        // 检查是否需要显示等级5特殊面板
+        if (currentLevel >= 5 && !hasShownLevel5Special && level5SpecialPanel != null)
+        {
+            // 稍等一下再显示特殊面板
+            yield return new WaitForSeconds(0.5f);
+            yield return StartCoroutine(ShowLevel5SpecialPanel());
+        }
+        // 启动自动隐藏
+        if (autoHideCoroutine != null)
+        {
+            StopCoroutine(autoHideCoroutine);
+        }
+        autoHideCoroutine = StartCoroutine(AutoHideCoroutine());
     }
     
-    // 更新文本（使用当前值，可能已被待定更新）
-    UpdateUIText();
-    
-    // 显示主面板
-    levelUpPanel.SetActive(true);
-    canvasGroup.alpha = 0f;
-    
-    // 淡入动画
-    float elapsedTime = 0f;
-    while (elapsedTime < panelFadeTime)
+    /// <summary>
+    /// 显示等级5特殊面板
+    /// </summary>
+    private IEnumerator ShowLevel5SpecialPanel()
     {
-        canvasGroup.alpha = Mathf.Lerp(0f, 1f, elapsedTime / panelFadeTime);
-        elapsedTime += Time.deltaTime;
-        yield return null;
+        Debug.Log("显示等级5特殊面板");
+        
+        // 设置标志，避免重复显示
+        hasShownLevel5Special = true;
+        
+        // 播放特殊音效
+        if (level5SpecialSound != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(level5SpecialSound);
+        }
+        
+        // 显示特殊面板
+        level5SpecialPanel.SetActive(true);
+        
+        // 等待特殊面板显示时间
+        yield return new WaitForSeconds(specialPanelShowTime);
+        
+        // 隐藏特殊面板
+        level5SpecialPanel.SetActive(false);
+        
+        Debug.Log("等级5特殊面板已关闭");
     }
-    canvasGroup.alpha = 1f;
     
-    // 更新属性值显示
-    UpdateAttributeValues();
-}
+    /// <summary>
+    /// 自动隐藏协程
+    /// </summary>
+    private IEnumerator AutoHideCoroutine()
+    {
+        // 等待指定时间后自动隐藏
+        yield return new WaitForSeconds(autoHideDelay);
+        
+        // 自动隐藏
+        if (isShowing)
+        {
+            Hide();
+        }
+    }
     
     private void UpdateUIText()
-{
-    if (levelText != null)
     {
-        levelText.text = $"LEVEL UP!\n<size=72>Lv. {currentLevel}</size>";
+        if (levelText != null)
+        {
+            levelText.text = $"LEVEL UP!\n<size=72>Lv. {currentLevel}</size>";
+        }
+        
+        if (rewardsText != null)
+        {
+            rewardsText.text = $"获得奖励:\n技能点: {skillPointsReward}\n属性点: {attributePointsReward}";
+        }
     }
-    
-    if (rewardsText != null)
-    {
-        rewardsText.text = $"获得奖励:\n技能点: {skillPointsReward}\n属性点: {attributePointsReward}";
-    }
-}
     
     /// <summary>
     /// 属性升级按钮点击事件
@@ -231,13 +332,10 @@ private void UpdateUITextWithPending()
             {
                 Debug.Log($"升级 {attribute} 属性");
                 
-                // 播放音效
                 PlayUpgradeSound();
                 
-                // 更新显示
                 UpdateAttributePointsDisplay(LevelManager.Instance.GetAvailableAttributePoints());
                 
-                // 如果属性点用完，自动关闭属性面板
                 if (LevelManager.Instance.GetAvailableAttributePoints() <= 0 && attributeUpgradePanel != null)
                 {
                     StartCoroutine(HideAttributePanelWithDelay());
@@ -271,7 +369,6 @@ private void UpdateUITextWithPending()
             attributePointsText.text = $"可用属性点: {points}";
         }
         
-        // 如果没有属性点，禁用升级按钮
         bool hasPoints = points > 0;
         if (healthButton != null) healthButton.interactable = hasPoints;
         if (attackButton != null) attackButton.interactable = hasPoints;
@@ -297,11 +394,7 @@ private void UpdateUITextWithPending()
             if (attackValueText != null)
                 attackValueText.text = $"{LevelManager.Instance.GetAttribute("attack")}";
             
-            if (defenseValueText != null)
-                defenseValueText.text = $"{LevelManager.Instance.GetAttribute("defense")}";
             
-            if (staminaValueText != null)
-                staminaValueText.text = $"{LevelManager.Instance.GetAttribute("stamina")}";
         }
     }
     
@@ -309,36 +402,119 @@ private void UpdateUITextWithPending()
     /// 隐藏界面
     /// </summary>
     public void Hide()
-{
-    if (!isShowing) return;
-    
-    // 恢复游戏时间
-    Time.timeScale = 1f;
-    
-    // 检查是否有待定升级
-    if (hasPendingLevelUp)
     {
-        // 处理待定升级
-        currentLevel = pendingLevel;
-        skillPointsReward = pendingSkillPoints;
-        attributePointsReward = pendingAttributePoints;
+        if (!isShowing) return;
         
-        // 重置待定状态
-        hasPendingLevelUp = false;
-        pendingSkillPoints = 0;
-        pendingAttributePoints = 0;
+        Time.timeScale = 1f;
         
-        // 立即显示下一次升级
-        StartCoroutine(ShowLevelUpCoroutine());
-        return;
+        // 检查队列中是否有更高等级的升级
+        if (levelUpQueue.Count > 0)
+        {
+            // 找到队列中最高等级的升级
+            LevelUpData nextLevelUp = FindHighestLevelInQueue();
+            levelUpQueue.Clear(); // 清空队列，只处理最高等级
+            
+            Debug.Log($"处理队列中的最高等级升级: 等级 {nextLevelUp.level}");
+            StartCoroutine(SwitchToNextLevelUp(nextLevelUp));
+        }
+        else
+        {
+            StartCoroutine(FadeOutAndHide());
+        }
     }
     
-    // 没有待定升级，正常隐藏
-    StartCoroutine(FadeOutAndHide());
-}
+    /// <summary>
+    /// 查找队列中的最高等级
+    /// </summary>
+    private LevelUpData FindHighestLevelInQueue()
+    {
+        LevelUpData highest = new LevelUpData(0, 0, 0);
+        foreach (var data in levelUpQueue)
+        {
+            if (data.level > highest.level)
+            {
+                highest = data;
+            }
+        }
+        return highest;
+    }
     
+    /// <summary>
+    /// 切换到下一个升级界面
+    /// </summary>
+    private IEnumerator SwitchToNextLevelUp(LevelUpData nextData)
+    {
+        // 快速淡出
+        float switchFadeTime = 0.2f;
+        float elapsedTime = 0f;
+        float startAlpha = canvasGroup.alpha;
+        
+        while (elapsedTime < switchFadeTime)
+        {
+            canvasGroup.alpha = Mathf.Lerp(startAlpha, 0f, elapsedTime / switchFadeTime);
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+        
+        canvasGroup.alpha = 0f;
+        
+        // 更新为下一个升级的数据
+        currentLevel = nextData.level;
+        skillPointsReward = nextData.skillPoints;
+        attributePointsReward = nextData.attributePoints;
+        
+        // 更新最后处理的等级
+        lastProcessedLevel = nextData.level;
+        
+        // 更新UI文本
+        UpdateUIText();
+        UpdateAttributeValues();
+        
+        // 淡入显示下一个升级
+        elapsedTime = 0f;
+        while (elapsedTime < switchFadeTime)
+        {
+            canvasGroup.alpha = Mathf.Lerp(0f, 1f, elapsedTime / switchFadeTime);
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+        canvasGroup.alpha = 1f;
+        
+        // 播放音效
+        if (levelUpSound != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(levelUpSound);
+        }
+        
+        Debug.Log($"切换到升级界面: 等级 {currentLevel}");
+        
+        // 检查是否需要显示等级5特殊面板
+        if (currentLevel >= 5 && !hasShownLevel5Special && level5SpecialPanel != null)
+        {
+            // 稍等一下再显示特殊面板
+            yield return new WaitForSeconds(0.5f);
+            yield return StartCoroutine(ShowLevel5SpecialPanel());
+        }
+        
+        // 启动自动隐藏
+        if (autoHideCoroutine != null)
+        {
+            StopCoroutine(autoHideCoroutine);
+        }
+        autoHideCoroutine = StartCoroutine(AutoHideCoroutine());
+    }
+    
+    /// <summary>
+    /// 完全淡出并隐藏界面
+    /// </summary>
     private IEnumerator FadeOutAndHide()
     {
+        // 确保特殊面板也关闭
+        if (level5SpecialPanel != null && level5SpecialPanel.activeSelf)
+        {
+            level5SpecialPanel.SetActive(false);
+        }
+        
         float elapsedTime = 0f;
         float startAlpha = canvasGroup.alpha;
         
@@ -353,5 +529,26 @@ private void UpdateUITextWithPending()
         levelUpPanel.SetActive(false);
         attributeUpgradePanel.SetActive(false);
         isShowing = false;
+        
+        Debug.Log("升级界面已完全关闭");
+    }
+    
+    /// <summary>
+    /// 清空升级队列
+    /// </summary>
+    public void ClearLevelUpQueue()
+    {
+        levelUpQueue.Clear();
+        lastProcessedLevel = 0;
+        Debug.Log("升级队列已清空");
+    }
+    
+    /// <summary>
+    /// 重置等级5特殊面板状态
+    /// </summary>
+    public void ResetLevel5SpecialPanel()
+    {
+        hasShownLevel5Special = false;
+        Debug.Log("等级5特殊面板状态已重置");
     }
 }

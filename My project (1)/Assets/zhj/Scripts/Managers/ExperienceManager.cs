@@ -272,6 +272,7 @@ public void ResetExperienceBar()
         
         onExperienceChanged?.Invoke(currentExperience, experienceToNextLevel);
     }
+    
 }
 
 [System.Serializable]
