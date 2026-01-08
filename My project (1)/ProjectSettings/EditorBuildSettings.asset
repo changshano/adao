@@ -14,7 +14,10 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/adao.unity
     guid: 4c01b680577d9444c85962f86247522f
-  - enabled: 1
+  - enabled: 0
     path: Assets/SampleScene.unity
     guid: 9fb06239972e21a4c92414846b726970
+  - enabled: 1
+    path: Assets/newAdao.unity
+    guid: 145908596c8150d46be3d69eff377cba
   m_configObjects: {}
