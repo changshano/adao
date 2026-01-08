@@ -86,6 +86,63 @@ public class DiaLogmanager : MonoBehaviour
     /// 对话是否结束
     /// </summary>
     private bool isDialogEnded = false;
+    
+    /// <summary>
+    /// 对话结束后传送的目标位置
+    /// </summary>
+    [SerializeField] private Vector3 teleportTargetPosition = Vector3.zero;
+    
+    /// <summary>
+    /// 是否在对话结束后传送玩家
+    /// </summary>
+    [SerializeField] private bool enableTeleport = false;
+    
+    /// <summary>
+    /// 玩家对象标签
+    /// </summary>
+    [SerializeField] private string playerTag = "Player";
+    
+    /// <summary>
+    /// 玩家对象引用
+    /// </summary>
+    private GameObject playerObject;
+    
+    /// <summary>
+    /// 玩家对象的Transform组件
+    /// </summary>
+    private Transform playerTransform;
+    
+    /// <summary>
+    /// 是否保持玩家的旋转
+    /// </summary>
+    [SerializeField] private bool keepRotation = true;
+    
+    /// <summary>
+    /// 是否立即传送（不淡入淡出）
+    /// </summary>
+    [SerializeField] private bool instantTeleport = true;
+    
+    /// <summary>
+    /// 传送前的延迟时间（秒）
+    /// </summary>
+    [SerializeField] private float teleportDelay = 0.5f;
+    
+    /// <summary>
+    /// 传送时的淡入淡出面板
+    /// </summary>
+    [SerializeField] private Image fadePanel;
+    
+    /// <summary>
+    /// 淡入淡出时间
+    /// </summary>
+    [SerializeField] private float fadeDuration = 0.5f;
+    
+    /// <summary>
+    /// 传送后执行的UnityEvent
+    /// </summary>
+    [System.Serializable]
+    public class TeleportEvent : UnityEngine.Events.UnityEvent { }
+    public TeleportEvent onTeleportComplete;
 
     #region Unity生命周期
     private void Awake()
@@ -103,6 +160,9 @@ public class DiaLogmanager : MonoBehaviour
         
         // 确保UI状态正确
         InitializeUI();
+        
+        // 查找玩家对象
+        FindPlayerObject();
         
         // 如果已经有对话数据，开始对话
         if (dialogDataFile != null)
@@ -267,6 +327,33 @@ public class DiaLogmanager : MonoBehaviour
             Debug.Log($"[对话管理器] UI初始化完成");
         }
     }
+    
+    /// <summary>
+    /// 查找玩家对象
+    /// </summary>
+    private void FindPlayerObject()
+    {
+        try
+        {
+            playerObject = GameObject.FindGameObjectWithTag(playerTag);
+            if (playerObject != null)
+            {
+                playerTransform = playerObject.transform;
+                if (debugMode)
+                {
+                    Debug.Log($"[对话管理器] 找到玩家对象: {playerObject.name}");
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"[对话管理器] 未找到标签为 {playerTag} 的玩家对象");
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"[对话管理器] 查找玩家对象失败: {e.Message}");
+        }
+    }
     #endregion
 
     #region 对话控制
@@ -321,30 +408,128 @@ public class DiaLogmanager : MonoBehaviour
     /// 结束对话
     /// </summary>
     public void EndDialog()
+{
+    if (!isShowingDialog) return;
+    
+    if (debugMode)
     {
-        if (!isShowingDialog) return;
+        Debug.Log($"[对话管理器] 结束对话");
+    }
+    
+    isShowingDialog = false;
+    isDialogEnded = true;
+    
+    // 发送对话结束事件
+    SendMessage("OnDialogEnded", SendMessageOptions.DontRequireReceiver);
+    
+    // 传送玩家
+    if (enableTeleport)
+    {
+        // 检查游戏对象是否活动
+        if (this != null && this.gameObject != null && this.gameObject.activeInHierarchy)
+        {
+            StartCoroutine(TeleportPlayerCoroutine());
+        }
+        else
+        {
+            // 如果对象不活动，直接传送
+            if (debugMode)
+            {
+                Debug.LogWarning($"[对话管理器] 游戏对象不活动，直接传送玩家");
+            }
+            
+            // 立即传送玩家
+            TeleportPlayerImmediate();
+        }
+    }
+    else
+    {
+        // 立即隐藏面板
+        HideDialogPanelImmediate();
+    }
+}
+    /// <summary>
+/// 立即隐藏面板
+/// </summary>
+private void HideDialogPanelImmediate()
+{
+    if (dialogPanel != null && dialogPanel.activeSelf)
+    {
+        dialogPanel.SetActive(false);
+    }
+    
+    // 清理UI
+    ClearUI();
+}
+/// <summary>
+/// 清理UI
+/// </summary>
+private void ClearUI()
+{
+    // 清空文本
+    if (nameText != null)
+    {
+        nameText.text = "";
+    }
+    
+    if (dialogText != null)
+    {
+        dialogText.text = "";
+    }
+    
+    // 隐藏继续按钮
+    if (nextButton != null && nextButton.gameObject.activeSelf)
+    {
+        nextButton.gameObject.SetActive(false);
+    }
+    
+    // 清空选项按钮
+    ClearOptionButtons();
+}
+/// <summary>
+/// 立即传送玩家
+/// </summary>
+private void TeleportPlayerImmediate()
+{
+    if (!enableTeleport || playerTransform == null) return;
+    
+    try
+    {
+        if (debugMode)
+        {
+            Debug.Log($"[对话管理器] 立即传送玩家到位置: {teleportTargetPosition}");
+        }
+        
+        // 保存当前旋转
+        Quaternion originalRotation = playerTransform.rotation;
+        
+        // 更新玩家位置
+        playerTransform.position = teleportTargetPosition;
+        
+        // 如果不需要保持旋转，重置旋转
+        if (!keepRotation)
+        {
+            playerTransform.rotation = Quaternion.identity;
+        }
         
         if (debugMode)
         {
-            Debug.Log($"[对话管理器] 结束对话");
+            Debug.Log($"[对话管理器] 玩家传送完成: {playerTransform.position}");
         }
         
-        // 隐藏对话面板
-        if (dialogPanel != null && dialogPanel.activeSelf)
-        {
-            dialogPanel.SetActive(false);
-        }
-        
-        // 清理UI
-        InitializeUI();
-        
-        isShowingDialog = false;
-        isDialogEnded = true;
-        
-        // 发送对话结束事件
-        SendMessage("OnDialogEnded", SendMessageOptions.DontRequireReceiver);
+        // 触发传送完成事件
+        onTeleportComplete?.Invoke();
     }
-    
+    catch (System.Exception e)
+    {
+        Debug.LogError($"[对话管理器] 传送玩家失败: {e.Message}");
+    }
+    finally
+    {
+        // 确保面板被隐藏
+        HideDialogPanelImmediate();
+    }
+}
     /// <summary>
     /// 继续下一句对话
     /// </summary>
@@ -358,6 +543,176 @@ public class DiaLogmanager : MonoBehaviour
         }
         
         ShowDiaLogRow();
+    }
+    #endregion
+
+    #region 玩家传送
+    /// <summary>
+    /// 传送玩家到目标位置
+    /// </summary>
+    public void TeleportPlayer()
+    {
+        if (!enableTeleport || playerTransform == null)
+        {
+            if (debugMode)
+            {
+                Debug.Log($"[对话管理器] 传送功能已禁用或玩家对象为空");
+            }
+            return;
+        }
+        
+        try
+        {
+            if (debugMode)
+            {
+                Debug.Log($"[对话管理器] 开始传送玩家到位置: {teleportTargetPosition}");
+            }
+            
+            // 保存当前旋转
+            Quaternion originalRotation = playerTransform.rotation;
+            
+            // 更新玩家位置
+            playerTransform.position = teleportTargetPosition;
+            
+            // 如果不需要保持旋转，重置旋转
+            if (!keepRotation)
+            {
+                playerTransform.rotation = Quaternion.identity;
+            }
+            
+            if (debugMode)
+            {
+                Debug.Log($"[对话管理器] 玩家传送完成: {playerTransform.position}");
+            }
+            
+            // 触发传送完成事件
+            onTeleportComplete?.Invoke();
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"[对话管理器] 传送玩家失败: {e.Message}");
+        }
+    }
+    
+    /// <summary>
+    /// 带有延迟和淡入淡出的传送协程
+    /// </summary>
+    private IEnumerator TeleportPlayerCoroutine()
+    {
+        if (!enableTeleport || playerTransform == null)
+        {
+            yield break;
+        }
+        
+        if (debugMode)
+        {
+            Debug.Log($"[对话管理器] 开始传送协程，延迟: {teleportDelay}秒");
+        }
+        
+        // 等待延迟
+        if (teleportDelay > 0)
+        {
+            yield return new WaitForSeconds(teleportDelay);
+        }
+        
+        // 淡出效果
+        if (!instantTeleport && fadePanel != null)
+        {
+            yield return StartCoroutine(FadeOut());
+        }
+        
+        // 传送玩家
+        TeleportPlayer();
+        
+        // 淡入效果
+        if (!instantTeleport && fadePanel != null)
+        {
+            yield return StartCoroutine(FadeIn());
+        }
+    }
+    
+    /// <summary>
+    /// 淡出效果
+    /// </summary>
+    private IEnumerator FadeOut()
+    {
+        if (fadePanel == null) yield break;
+        
+        fadePanel.gameObject.SetActive(true);
+        fadePanel.color = new Color(0, 0, 0, 0);
+        
+        float elapsedTime = 0f;
+        while (elapsedTime < fadeDuration)
+        {
+            float alpha = Mathf.Lerp(0, 1, elapsedTime / fadeDuration);
+            fadePanel.color = new Color(0, 0, 0, alpha);
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+        
+        fadePanel.color = new Color(0, 0, 0, 1);
+    }
+    
+    /// <summary>
+    /// 淡入效果
+    /// </summary>
+    private IEnumerator FadeIn()
+    {
+        if (fadePanel == null) yield break;
+        
+        fadePanel.color = new Color(0, 0, 0, 1);
+        
+        float elapsedTime = 0f;
+        while (elapsedTime < fadeDuration)
+        {
+            float alpha = Mathf.Lerp(1, 0, elapsedTime / fadeDuration);
+            fadePanel.color = new Color(0, 0, 0, alpha);
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+        
+        fadePanel.color = new Color(0, 0, 0, 0);
+        fadePanel.gameObject.SetActive(false);
+    }
+    
+    /// <summary>
+    /// 设置传送目标位置
+    /// </summary>
+    public void SetTeleportTargetPosition(Vector3 newPosition)
+    {
+        teleportTargetPosition = newPosition;
+        if (debugMode)
+        {
+            Debug.Log($"[对话管理器] 设置传送目标位置: {teleportTargetPosition}");
+        }
+    }
+    
+    /// <summary>
+    /// 设置传送功能开关
+    /// </summary>
+    public void SetTeleportEnabled(bool enabled)
+    {
+        enableTeleport = enabled;
+        if (debugMode)
+        {
+            Debug.Log($"[对话管理器] 传送功能: {enableTeleport}");
+        }
+    }
+    
+    /// <summary>
+    /// 设置传送玩家对象
+    /// </summary>
+    public void SetPlayerObject(GameObject player)
+    {
+        playerObject = player;
+        if (playerObject != null)
+        {
+            playerTransform = playerObject.transform;
+        }
+        if (debugMode)
+        {
+            Debug.Log($"[对话管理器] 设置玩家对象: {playerObject?.name ?? "null"}");
+        }
     }
     #endregion
 
@@ -694,6 +1049,22 @@ public class DiaLogmanager : MonoBehaviour
         }
     }
     
+    [ContextMenu("测试: 立即传送玩家")]
+    public void TestTeleportPlayer()
+    {
+        TeleportPlayer();
+    }
+    
+    [ContextMenu("设置传送位置为当前位置")]
+    public void SetTeleportToCurrentPosition()
+    {
+        if (playerTransform != null)
+        {
+            teleportTargetPosition = playerTransform.position;
+            Debug.Log($"[对话管理器] 设置传送位置为玩家当前位置: {teleportTargetPosition}");
+        }
+    }
+    
     [ContextMenu("打印状态")]
     public void PrintStatus()
     {
@@ -704,6 +1075,9 @@ public class DiaLogmanager : MonoBehaviour
         Debug.Log($"对话行数: {(dialogRows != null ? dialogRows.Length : 0)}");
         Debug.Log($"面板激活: {dialogPanel != null && dialogPanel.activeSelf}");
         Debug.Log($"图片字典数量: {imageDic.Count}");
+        Debug.Log($"传送功能: {enableTeleport}");
+        Debug.Log($"传送目标位置: {teleportTargetPosition}");
+        Debug.Log($"玩家对象: {playerObject?.name ?? "null"}");
     }
     
     [ContextMenu("验证UI引用")]
@@ -718,6 +1092,7 @@ public class DiaLogmanager : MonoBehaviour
         Debug.Log($"继续按钮: {nextButton != null}");
         Debug.Log($"选项按钮预制体: {optionButton != null}");
         Debug.Log($"按钮组: {buttonGroup != null}");
+        Debug.Log($"淡入淡出面板: {fadePanel != null}");
     }
     #endregion
 }
