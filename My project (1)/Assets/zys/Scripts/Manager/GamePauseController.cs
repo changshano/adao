@@ -1,11 +1,15 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;  // 添加场景管理命名空间
+using System.Collections;           // 添加协程命名空间
 
 public class GamePauseController : MonoBehaviour
 {
     [Header("UI 按钮组件")]
     [SerializeField] private Button pauseButton;      // 暂停按钮
-    [SerializeField] private Button resumeButton;     // 继续按钮
+    [SerializeField] private Button resumeButton;    // 继续按钮
+    [SerializeField] private Button restartButton;   // 重新开始按钮
+    [SerializeField] private Button exitButton;      // 退出游戏按钮
 
     [Header("暂停相关设置")]
     [SerializeField] private float timeScaleWhenPaused = 0f;  // 暂停时的时间缩放
@@ -20,6 +24,10 @@ public class GamePauseController : MonoBehaviour
 
     [Header("玩家控制")]
     [SerializeField] private MonoBehaviour playerController;  // 玩家控制器脚本
+
+    [Header("游戏控制")]
+    [SerializeField] private string mainMenuScene = "MainMenu";  // 主菜单场景名称
+    [SerializeField] private float sceneChangeDelay = 0.2f;      // 场景切换延迟
 
     private bool isPaused = false;  // 游戏当前是否暂停
     private Coroutine fadeCoroutine;  // 渐变协程引用
@@ -38,6 +46,16 @@ public class GamePauseController : MonoBehaviour
         if (resumeButton != null)
         {
             resumeButton.onClick.AddListener(ResumeGame);
+        }
+
+        if (restartButton != null)
+        {
+            restartButton.onClick.AddListener(OnRestartButtonClicked);
+        }
+
+        if (exitButton != null)
+        {
+            exitButton.onClick.AddListener(OnExitButtonClicked);
         }
 
         // 初始化遮罩状态
@@ -63,6 +81,16 @@ public class GamePauseController : MonoBehaviour
         if (resumeButton != null)
         {
             resumeButton.onClick.RemoveListener(ResumeGame);
+        }
+
+        if (restartButton != null)
+        {
+            restartButton.onClick.RemoveListener(OnRestartButtonClicked);
+        }
+
+        if (exitButton != null)
+        {
+            exitButton.onClick.RemoveListener(OnExitButtonClicked);
         }
     }
 
@@ -117,6 +145,99 @@ public class GamePauseController : MonoBehaviour
     }
 
     /// <summary>
+    /// 点击重新开始按钮
+    /// </summary>
+    public void OnRestartButtonClicked()
+    {
+        Debug.Log("重新开始游戏");
+        RestartGame();
+    }
+
+    /// <summary>
+    /// 点击退出游戏按钮
+    /// </summary>
+    public void OnExitButtonClicked()
+    {
+        Debug.Log("退出游戏");
+        ExitGame();
+    }
+
+    /// <summary>
+    /// 重新开始游戏
+    /// </summary>
+    public void RestartGame()
+    {
+        // 先恢复游戏时间
+        Time.timeScale = 1f;
+
+        // 获取当前场景索引
+        int currentSceneIndex = SceneManager.GetActiveScene().buildIndex;
+
+        // 重新加载当前场景
+        StartCoroutine(LoadSceneWithDelay(currentSceneIndex, sceneChangeDelay));
+    }
+
+    /// <summary>
+    /// 返回主菜单
+    /// </summary>
+    public void ReturnToMainMenu()
+    {
+        // 恢复游戏时间
+        Time.timeScale = 1f;
+
+        // 如果有指定主菜单场景，则加载主菜单
+        if (!string.IsNullOrEmpty(mainMenuScene))
+        {
+            StartCoroutine(LoadSceneWithDelay(mainMenuScene, sceneChangeDelay));
+        }
+        else
+        {
+            // 否则加载第一个场景
+            StartCoroutine(LoadSceneWithDelay(0, sceneChangeDelay));
+        }
+    }
+
+    /// <summary>
+    /// 退出游戏
+    /// </summary>
+    public void ExitGame()
+    {
+        // 恢复游戏时间
+        Time.timeScale = 1f;
+
+        Debug.Log("退出游戏...");
+
+#if UNITY_EDITOR
+        // 在Unity编辑器中
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        // 在构建的游戏/应用程序中
+        Application.Quit();
+#endif
+    }
+
+    /// <summary>
+    /// 带延迟加载场景
+    /// </summary>
+    private IEnumerator LoadSceneWithDelay(int sceneIndex, float delay)
+    {
+        // 等待一小段时间，让过渡更自然
+        yield return new WaitForSecondsRealtime(delay);
+
+        // 加载场景
+        SceneManager.LoadScene(sceneIndex);
+    }
+
+    /// <summary>
+    /// 带延迟加载场景（通过名称）
+    /// </summary>
+    private IEnumerator LoadSceneWithDelay(string sceneName, float delay)
+    {
+        yield return new WaitForSecondsRealtime(delay);
+        SceneManager.LoadScene(sceneName);
+    }
+
+    /// <summary>
     /// 显示屏幕变暗遮罩
     /// </summary>
     private void ShowDarkOverlay()
@@ -166,7 +287,7 @@ public class GamePauseController : MonoBehaviour
     /// <summary>
     /// 遮罩渐变协程
     /// </summary>
-    private System.Collections.IEnumerator FadeOverlay(float startAlpha, float endAlpha, float duration, bool disableOnComplete = false)
+    private IEnumerator FadeOverlay(float startAlpha, float endAlpha, float duration, bool disableOnComplete = false)
     {
         float elapsedTime = 0f;
         Color startColor = darkOverlay.color;
@@ -219,6 +340,17 @@ public class GamePauseController : MonoBehaviour
         {
             resumeButton.gameObject.SetActive(isPaused);  // 游戏暂停时显示继续按钮
         }
+
+        // 重新开始和退出按钮只在暂停时显示
+        if (restartButton != null)
+        {
+            restartButton.gameObject.SetActive(isPaused);
+        }
+
+        if (exitButton != null)
+        {
+            exitButton.gameObject.SetActive(isPaused);
+        }
     }
 
     /// <summary>
@@ -234,5 +366,23 @@ public class GamePauseController : MonoBehaviour
     private void TestResume()
     {
         ResumeGame();
+    }
+
+    /// <summary>
+    /// 在编辑器中测试重新开始功能
+    /// </summary>
+    [ContextMenu("测试重新开始")]
+    private void TestRestart()
+    {
+        RestartGame();
+    }
+
+    /// <summary>
+    /// 在编辑器中测试退出功能
+    /// </summary>
+    [ContextMenu("测试退出游戏")]
+    private void TestExit()
+    {
+        ExitGame();
     }
 }
