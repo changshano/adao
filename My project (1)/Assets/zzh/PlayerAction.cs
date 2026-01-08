@@ -14,6 +14,7 @@ public class PlayerAction : MonoBehaviour
     public Rigidbody2D playerRB;
     public Collider2D playerColl;
     public Animator playerAnim;
+    public GameObject footEffect;
 
     [Header("血量设置")]
     public float maxHealth = 100f;
@@ -179,15 +180,67 @@ public class PlayerAction : MonoBehaviour
         }
     }
 
+    //void PlayerMove()
+    //{
+    //    if (isDead) return;
+
+    //    float horizontalNum = Input.GetAxis("Horizontal");
+    //    float faceNum = Input.GetAxisRaw("Horizontal");
+    //    playerRB.velocity = new Vector2(playerMoveSpeed * horizontalNum, playerRB.velocity.y);
+    //    playerAnim.SetFloat("run", Mathf.Abs(playerMoveSpeed * horizontalNum));
+    //    if (faceNum != 0)
+    //    {
+    //        transform.localScale = new Vector3(faceNum, transform.localScale.y, transform.localScale.z);
+    //    }
+    //}
+
+    //void PlayerJump()
+    //{
+    //    if (isDead) return;
+
+    //    if (Input.GetButtonDown("Jump"))
+    //    {
+    //        if (isGround)
+    //        {
+    //            playerRB.velocity = new Vector2(playerRB.velocity.x, playerJumpSpeed);
+    //            jumpCount = 1;
+    //            isJumping = true;
+    //            playerAnim.SetBool("jump", true);
+    //        }
+    //        else if (!isGround && jumpCount < maxJumpCount && canDoubleJump)
+    //        {
+    //            playerRB.velocity = new Vector2(playerRB.velocity.x, 0f);
+    //            playerRB.velocity = new Vector2(playerRB.velocity.x, playerJumpSpeed);
+    //            jumpCount++;
+    //            canDoubleJump = false;
+    //            playerAnim.SetBool("jump", true);
+    //        }
+    //    }
+    //}
+
     void PlayerMove()
     {
-        if (isDead) return;
+        if (isDead || isAttacking) return; // 添加攻击状态检查
 
         float horizontalNum = Input.GetAxis("Horizontal");
         float faceNum = Input.GetAxisRaw("Horizontal");
         playerRB.velocity = new Vector2(playerMoveSpeed * horizontalNum, playerRB.velocity.y);
         playerAnim.SetFloat("run", Mathf.Abs(playerMoveSpeed * horizontalNum));
-        if (faceNum != 0)
+
+        // 控制滑尘效果
+        if (footEffect != null)
+        {
+            // 当有水平输入且速度大于阈值时显示
+            bool isRunning = playerAnim.GetFloat("run") > 0.1f;
+            if (footEffect.activeSelf != isRunning)
+            {
+                footEffect.SetActive(isRunning);
+            }
+        }
+
+
+        // 攻击时可以转向但不移动
+        if (faceNum != 0 && !isAttacking)
         {
             transform.localScale = new Vector3(faceNum, transform.localScale.y, transform.localScale.z);
         }
@@ -195,7 +248,7 @@ public class PlayerAction : MonoBehaviour
 
     void PlayerJump()
     {
-        if (isDead) return;
+        if (isDead || isAttacking) return; // 添加攻击状态检查
 
         if (Input.GetButtonDown("Jump"))
         {
@@ -216,6 +269,8 @@ public class PlayerAction : MonoBehaviour
             }
         }
     }
+
+
 
     void PlayerAttack()
     {
@@ -367,7 +422,10 @@ public class PlayerAction : MonoBehaviour
         Debug.Log("阿岛已经阵亡！");
 
         // 6. 延迟销毁
-        StartCoroutine(DestroyAfterDeath());
+        //StartCoroutine(DestroyAfterDeath());
+        Destroy(gameObject, 1f);
+        GameManager.Instance.GameOver();
+
     }
 
     public float Heal(float healAmount)

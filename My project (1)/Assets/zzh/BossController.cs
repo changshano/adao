@@ -17,7 +17,7 @@ public class BossController : MonoBehaviour
 
     [Header("死亡设置")]
     public GameObject deathEffect; // 死亡特效
-    public float destroyDelay = 2f; // 死亡后销毁延迟
+    public float destroyDelay = 1f; // 死亡后销毁延迟
 
     [Header("移动设置")]
     public Transform target; // 玩家目标

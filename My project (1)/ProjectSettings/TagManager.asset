@@ -8,6 +8,7 @@ TagManager:
   - Enemy
   - Interactable
   - Attack
+  - GameOverPanel
   layers:
   - Default
   - TransparentFX
