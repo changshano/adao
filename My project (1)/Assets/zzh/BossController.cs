@@ -43,6 +43,10 @@ public class BossController : MonoBehaviour
     public GameObject[] dropItems; // 可能掉落的物品
     public float dropChance = 0.8f; // 掉落概率
 
+    [Header("音频设置")]
+    public bool useMusicSwitching = true; // 是否使用音乐切换
+    private bool wasChasing = false; // 上一帧是否在追逐
+
     // 动画组件
     private Animator animator;
     private Rigidbody2D rb;
@@ -51,6 +55,7 @@ public class BossController : MonoBehaviour
     private bool isChasing = false;
     private bool isAttacking = false;
     private int currentPhase = 1; // 当前阶段
+    private bool musicSwitched = false; // 音乐是否已切换到战斗音乐
 
     void Start()
     {
@@ -77,6 +82,10 @@ public class BossController : MonoBehaviour
 
         // 初始化攻击冷却
         lastAttackTime = -attackCooldown;
+
+        // 初始化音乐状态
+        wasChasing = false;
+        musicSwitched = false;
     }
 
     void Update()
@@ -85,6 +94,12 @@ public class BossController : MonoBehaviour
 
         CheckCurrentPhase();
         UpdateState();
+
+        // 检测追逐状态变化并切换音乐
+        if (useMusicSwitching)
+        {
+            CheckChasingStateChange();
+        }
 
         // 检测死亡
         if (currentHP <= 0 && !isDead)
@@ -147,6 +162,60 @@ public class BossController : MonoBehaviour
             !isAttacking)
         {
             StartCoroutine(Attack());
+        }
+    }
+
+    // 检查追逐状态变化并切换音乐
+    void CheckChasingStateChange()
+    {
+        // 检查是否在追逐玩家
+        if (target != null)
+        {
+            float distanceToTarget = Vector2.Distance(transform.position, target.position);
+            bool currentlyChasing = distanceToTarget <= followDistance && distanceToTarget > stopDistance;
+
+            // 如果追逐状态发生变化
+            if (currentlyChasing != wasChasing)
+            {
+                if (currentlyChasing)
+                {
+                    // 开始追逐，切换到战斗音乐
+                    SwitchToBattleMusic();
+                }
+                else
+                {
+                    // 停止追逐，切换回正常背景音乐
+                    SwitchToNormalMusic();
+                }
+            }
+
+            wasChasing = currentlyChasing;
+        }
+    }
+
+    // 切换到战斗音乐
+    void SwitchToBattleMusic()
+    {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayBattleMusic(true);
+            musicSwitched = true;
+            Debug.Log("Boss开始追逐，切换到战斗音乐");
+        }
+        else
+        {
+            Debug.LogWarning("AudioManager实例未找到！");
+        }
+    }
+
+    // 切换到正常音乐
+    void SwitchToNormalMusic()
+    {
+        if (AudioManager.Instance != null && musicSwitched)
+        {
+            AudioManager.Instance.PlayNormalBackgroundMusic(true);
+            musicSwitched = false;
+            Debug.Log("Boss停止追逐，切换回正常背景音乐");
         }
     }
 
@@ -252,6 +321,13 @@ public class BossController : MonoBehaviour
         if (isDead) return;
 
         isDead = true;
+
+        // Boss死亡时切换回正常背景音乐
+        if (useMusicSwitching && musicSwitched)
+        {
+            SwitchToNormalMusic();
+            Debug.Log("Boss死亡，切换回正常背景音乐");
+        }
 
         // 播放死亡动画
         if (animator != null)

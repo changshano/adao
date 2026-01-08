@@ -15,6 +15,10 @@ public class PlayerAction : MonoBehaviour
     public Collider2D playerColl;
     public Animator playerAnim;
     public GameObject footEffect;
+    // 移动音效控制相关变量
+    private bool wasMoving = false; // 上次是否在移动
+    private float moveSoundStopTimer = 0f; // 移动音效停止计时器
+    private float moveSoundStopDelay = 0.1f; // 移动音效停止延迟
 
     [Header("血量设置")]
     public float maxHealth = 100f;
@@ -178,6 +182,16 @@ public class PlayerAction : MonoBehaviour
         {
             Heal(10f);
         }
+        
+        if (moveSoundStopTimer > 0)
+        {
+            moveSoundStopTimer -= Time.deltaTime;
+            if (moveSoundStopTimer <= 0)
+            {
+                AudioManager.Instance.StopMoveSound();
+            }
+        }
+
     }
 
     //void PlayerMove()
@@ -220,17 +234,36 @@ public class PlayerAction : MonoBehaviour
 
     void PlayerMove()
     {
-        if (isDead || isAttacking) return; // 添加攻击状态检查
+        if (isDead || isAttacking) return;
 
         float horizontalNum = Input.GetAxis("Horizontal");
         float faceNum = Input.GetAxisRaw("Horizontal");
         playerRB.velocity = new Vector2(playerMoveSpeed * horizontalNum, playerRB.velocity.y);
-        playerAnim.SetFloat("run", Mathf.Abs(playerMoveSpeed * horizontalNum));
+        float runSpeed = Mathf.Abs(playerMoveSpeed * horizontalNum);
+        playerAnim.SetFloat("run", runSpeed);
+
+        // ===== 这里是新增的移动音效控制逻辑 =====
+        bool isMoving = Mathf.Abs(horizontalNum) > 0.1f;
+
+        if (isMoving)
+        {
+            moveSoundStopTimer = moveSoundStopDelay;
+
+            if (!wasMoving)
+            {
+                AudioManager.Instance.StartMoveSound(); // 开始播放移动音效
+                wasMoving = true;
+            }
+        }
+        else
+        {
+            wasMoving = false;
+        }
+        // ===== 移动音效控制逻辑结束 =====
 
         // 控制滑尘效果
         if (footEffect != null)
         {
-            // 当有水平输入且速度大于阈值时显示
             bool isRunning = playerAnim.GetFloat("run") > 0.1f;
             if (footEffect.activeSelf != isRunning)
             {
@@ -238,8 +271,6 @@ public class PlayerAction : MonoBehaviour
             }
         }
 
-
-        // 攻击时可以转向但不移动
         if (faceNum != 0 && !isAttacking)
         {
             transform.localScale = new Vector3(faceNum, transform.localScale.y, transform.localScale.z);
@@ -258,6 +289,7 @@ public class PlayerAction : MonoBehaviour
                 jumpCount = 1;
                 isJumping = true;
                 playerAnim.SetBool("jump", true);
+                AudioManager.Instance.PlayJumpSound();
             }
             else if (!isGround && jumpCount < maxJumpCount && canDoubleJump)
             {
@@ -266,6 +298,7 @@ public class PlayerAction : MonoBehaviour
                 jumpCount++;
                 canDoubleJump = false;
                 playerAnim.SetBool("jump", true);
+                AudioManager.Instance.PlayJumpSound();
             }
         }
     }
@@ -279,7 +312,9 @@ public class PlayerAction : MonoBehaviour
         if (Input.GetButtonDown("Fire1"))
         {
             // 播放攻击动画
+
             playerAnim.SetTrigger("attack");
+            AudioManager.Instance.PlayAttackSound();
             isAttacking = true;
 
             // 延迟检测并攻击敌人，与攻击动画同步
@@ -360,6 +395,7 @@ public class PlayerAction : MonoBehaviour
 
         // 触发受伤动画
         playerAnim.SetTrigger("hurt");
+        AudioManager.Instance.PlayHurtSound();
 
         // 进入无敌状态
         isInvincible = true;
@@ -402,6 +438,7 @@ public class PlayerAction : MonoBehaviour
 
         // 1. 播放死亡动画
         playerAnim.SetTrigger(deathTriggerName);
+        AudioManager.Instance.PlayDeathSound();
         Debug.Log($"触发死亡动画触发器: {deathTriggerName}");
 
         // 2. 停止移动
@@ -560,4 +597,18 @@ public float GetCurrentEquipmentBonus()
     {
         return isDead;
     }
+
+    void OnDisable()
+    {
+        // 当脚本被禁用时，停止移动音效
+        AudioManager.Instance.StopMoveSound();
+        wasMoving = false;
+    }
+
+    void OnDestroy()
+    {
+        // 当对象被销毁时，停止移动音效
+        AudioManager.Instance.StopMoveSound();
+    }
+
 }

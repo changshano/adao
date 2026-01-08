@@ -14,9 +14,26 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private AudioSource musicSource;
     [SerializeField] private AudioSource sfxSource;
     [SerializeField] private AudioSource uiSource;
+    [SerializeField] private AudioSource movementSource; // 专门用于移动音效的音频源
 
-    [Header("音频剪辑")]
+    [Header("背景音乐")]
     [SerializeField] private AudioClip backgroundMusic;
+
+    [Header("战斗背景音乐")] // 新增的标题
+    [SerializeField] private AudioClip battleBackgroundMusic; // 新增的战斗背景音乐字段
+
+    [Header("角色音效")]
+    [SerializeField] private AudioClip attackSound;
+    [SerializeField] private AudioClip hurtSound;
+    [SerializeField] private AudioClip jumpSound;
+    [SerializeField] private AudioClip deathSound;
+
+    [Header("移动音效")]
+    [SerializeField] private AudioClip moveSound;
+    [SerializeField] private bool loopMoveSound = true; // 是否循环播放移动音效
+    [SerializeField] private float moveSoundDelay = 0.5f; // 移动音效播放间隔
+
+    [Header("其他音效列表")]
     [SerializeField] private List<AudioClip> soundEffects = new List<AudioClip>();
 
     [Header("音量设置")]
@@ -33,6 +50,8 @@ public class AudioManager : MonoBehaviour
     public float fadeDuration = 1f;
 
     private Dictionary<string, AudioClip> soundEffectDict = new Dictionary<string, AudioClip>();
+    private Coroutine moveSoundCoroutine;
+    private bool isMoving = false;
 
     private void Awake()
     {
@@ -55,6 +74,7 @@ public class AudioManager : MonoBehaviour
         if (musicSource == null) musicSource = gameObject.AddComponent<AudioSource>();
         if (sfxSource == null) sfxSource = gameObject.AddComponent<AudioSource>();
         if (uiSource == null) uiSource = gameObject.AddComponent<AudioSource>();
+        if (movementSource == null) movementSource = gameObject.AddComponent<AudioSource>();
 
         // 设置音频源属性
         SetupAudioSources();
@@ -68,7 +88,23 @@ public class AudioManager : MonoBehaviour
 
     private void InitializeAudioManager()
     {
-        // 初始化音频剪辑字典
+        // 初始化特定角色音效到字典
+        if (attackSound != null && !soundEffectDict.ContainsKey("Attack"))
+            soundEffectDict["Attack"] = attackSound;
+
+        if (hurtSound != null && !soundEffectDict.ContainsKey("Hurt"))
+            soundEffectDict["Hurt"] = hurtSound;
+
+        if (jumpSound != null && !soundEffectDict.ContainsKey("Jump"))
+            soundEffectDict["Jump"] = jumpSound;
+
+        if (deathSound != null && !soundEffectDict.ContainsKey("Death"))
+            soundEffectDict["Death"] = deathSound;
+
+        if (moveSound != null && !soundEffectDict.ContainsKey("Move"))
+            soundEffectDict["Move"] = moveSound;
+
+        // 初始化其他音频剪辑字典
         foreach (var clip in soundEffects)
         {
             if (clip != null && !soundEffectDict.ContainsKey(clip.name))
@@ -99,6 +135,12 @@ public class AudioManager : MonoBehaviour
         uiSource.volume = uiVolume;
         uiSource.playOnAwake = false;
         uiSource.outputAudioMixerGroup = audioMixer?.FindMatchingGroups("UI")?[0];
+
+        // 移动音效源设置
+        movementSource.loop = false;
+        movementSource.volume = sfxVolume;
+        movementSource.playOnAwake = false;
+        movementSource.outputAudioMixerGroup = audioMixer?.FindMatchingGroups("SFX")?[0];
     }
 
     // 播放背景音乐
@@ -114,6 +156,32 @@ public class AudioManager : MonoBehaviour
         {
             musicSource.clip = clip;
             musicSource.Play();
+        }
+    }
+
+    // 新增：播放战斗背景音乐（带淡入淡出效果）
+    public void PlayBattleMusic(bool fadeIn = false)
+    {
+        if (battleBackgroundMusic != null)
+        {
+            PlayBackgroundMusic(battleBackgroundMusic, fadeIn);
+        }
+        else
+        {
+            Debug.LogWarning("战斗背景音乐未分配！");
+        }
+    }
+
+    // 新增：切换回普通背景音乐（带淡入淡出效果）
+    public void PlayNormalBackgroundMusic(bool fadeIn = false)
+    {
+        if (backgroundMusic != null)
+        {
+            PlayBackgroundMusic(backgroundMusic, fadeIn);
+        }
+        else
+        {
+            Debug.LogWarning("普通背景音乐未分配！");
         }
     }
 
@@ -142,6 +210,85 @@ public class AudioManager : MonoBehaviour
         sfxSource.pitch = pitch;
         sfxSource.PlayOneShot(clip, volume);
     }
+
+    // ===== 角色音效专用方法 =====
+
+    public void PlayAttackSound(float volume = 1f, float pitch = 1f)
+    {
+        if (!sfxEnabled || attackSound == null) return;
+        sfxSource.pitch = pitch;
+        sfxSource.PlayOneShot(attackSound, volume);
+    }
+
+    public void PlayHurtSound(float volume = 1f, float pitch = 1f)
+    {
+        if (!sfxEnabled || hurtSound == null) return;
+        sfxSource.pitch = pitch;
+        sfxSource.PlayOneShot(hurtSound, volume);
+    }
+
+    public void PlayJumpSound(float volume = 1f, float pitch = 1f)
+    {
+        if (!sfxEnabled || jumpSound == null) return;
+        sfxSource.pitch = pitch;
+        sfxSource.PlayOneShot(jumpSound, volume);
+    }
+
+    public void PlayDeathSound(float volume = 1f, float pitch = 1f)
+    {
+        if (!sfxEnabled || deathSound == null) return;
+        sfxSource.pitch = pitch;
+        sfxSource.PlayOneShot(deathSound, volume);
+    }
+
+    // 开始播放移动音效
+    public void StartMoveSound(bool loop = true, float delay = 0.5f)
+    {
+        if (!sfxEnabled || moveSound == null || isMoving) return;
+
+        isMoving = true;
+
+        if (loop && loopMoveSound)
+        {
+            // 循环播放移动音效
+            moveSoundCoroutine = StartCoroutine(PlayMoveSoundLoop(delay));
+        }
+        else
+        {
+            // 播放一次移动音效
+            movementSource.PlayOneShot(moveSound, sfxVolume);
+        }
+    }
+
+    // 停止播放移动音效
+    public void StopMoveSound()
+    {
+        if (!isMoving) return;
+
+        isMoving = false;
+
+        if (moveSoundCoroutine != null)
+        {
+            StopCoroutine(moveSoundCoroutine);
+            moveSoundCoroutine = null;
+        }
+
+        if (movementSource.isPlaying)
+        {
+            movementSource.Stop();
+        }
+    }
+
+    private IEnumerator PlayMoveSoundLoop(float delay)
+    {
+        while (isMoving)
+        {
+            movementSource.PlayOneShot(moveSound, sfxVolume);
+            yield return new WaitForSeconds(delay);
+        }
+    }
+
+    // ===== 其他原有方法 =====
 
     // 停止背景音乐
     public void StopMusic(bool fadeOut = false)
@@ -221,6 +368,7 @@ public class AudioManager : MonoBehaviour
     {
         sfxVolume = Mathf.Clamp01(volume);
         sfxSource.volume = sfxVolume;
+        movementSource.volume = sfxVolume;
     }
 
     public void SetUIVolume(float volume)
@@ -273,4 +421,24 @@ public class AudioManager : MonoBehaviour
     {
         return new List<string>(soundEffectDict.Keys);
     }
+
+    // 获取特定音效
+    public AudioClip GetAttackSound() => attackSound;
+    public AudioClip GetHurtSound() => hurtSound;
+    public AudioClip GetJumpSound() => jumpSound;
+    public AudioClip GetDeathSound() => deathSound;
+    public AudioClip GetMoveSound() => moveSound;
+
+    // 新增：获取战斗背景音乐
+    public AudioClip GetBattleBackgroundMusic() => battleBackgroundMusic;
+
+    // 设置特定音效
+    public void SetAttackSound(AudioClip clip) => attackSound = clip;
+    public void SetHurtSound(AudioClip clip) => hurtSound = clip;
+    public void SetJumpSound(AudioClip clip) => jumpSound = clip;
+    public void SetDeathSound(AudioClip clip) => deathSound = clip;
+    public void SetMoveSound(AudioClip clip) => moveSound = clip;
+
+    // 新增：设置战斗背景音乐
+    public void SetBattleBackgroundMusic(AudioClip clip) => battleBackgroundMusic = clip;
 }

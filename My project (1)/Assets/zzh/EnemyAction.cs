@@ -4,6 +4,12 @@ using UnityEngine;
 
 public class Enemy : MonoBehaviour
 {
+
+    // 添加全局静态变量来追踪正在追逐玩家的敌人数量
+    private static int chasingEnemiesCount = 0;
+    private static bool isBattleMusicPlaying = false;
+
+
     // 在现有Header下方添加经验值设置
     [Header("经验值设置")]
     public int expValue = 10; // 击败后获得的经验值（可调整）
@@ -46,6 +52,7 @@ public class Enemy : MonoBehaviour
 
     private Rigidbody2D rb;
 
+
     void Start()
     {
         // 初始化血量
@@ -84,10 +91,58 @@ public class Enemy : MonoBehaviour
         // 如果敌人死亡，不执行任何逻辑
         if (isDead) return;
 
+        // 保存之前的跟随状态
+        bool previousFollowingState = isFollowingPlayer;
+
         FollowPlayer();
+
+        // 检查跟随状态是否改变
+        if (isFollowingPlayer != previousFollowingState)
+        {
+            // 更新全局追逐敌人计数
+            if (isFollowingPlayer)
+            {
+                // 开始跟随，增加计数
+                chasingEnemiesCount++;
+            }
+            else
+            {
+                // 停止跟随，减少计数（确保不为负数）
+                chasingEnemiesCount = Mathf.Max(0, chasingEnemiesCount - 1);
+            }
+
+            // 根据全局计数切换音乐
+            UpdateBattleMusic();
+        }
+
         UpdateAnimationState();
-        CheckAttack(); // 检测是否满足攻击条件
+        CheckAttack();
     }
+
+    private static void UpdateBattleMusic()
+    {
+        if (AudioManager.Instance == null)
+        {
+            Debug.LogWarning("AudioManager未找到！");
+            return;
+        }
+
+        // 如果有敌人在追逐玩家，播放战斗音乐
+        if (chasingEnemiesCount > 0 && !isBattleMusicPlaying)
+        {
+            AudioManager.Instance.PlayBattleMusic(true);
+            isBattleMusicPlaying = true;
+            Debug.Log($"切换到战斗音乐，当前追逐敌人数：{chasingEnemiesCount}");
+        }
+        // 如果没有敌人在追逐，播放正常音乐
+        else if (chasingEnemiesCount == 0 && isBattleMusicPlaying)
+        {
+            AudioManager.Instance.PlayNormalBackgroundMusic(true);
+            isBattleMusicPlaying = false;
+            Debug.Log("切换到正常背景音乐");
+        }
+    }
+
 
     // 受到伤害
     public void TakeDamage(float damage)
@@ -133,6 +188,14 @@ public class Enemy : MonoBehaviour
         if (isDead) return;
 
         isDead = true;
+
+        // 如果死亡时正在追逐，减少计数
+        if (isFollowingPlayer)
+        {
+            isFollowingPlayer = false;
+            chasingEnemiesCount = Mathf.Max(0, chasingEnemiesCount - 1);
+            UpdateBattleMusic();
+        }
 
         // 播放死亡动画
         if (animator != null)
@@ -227,9 +290,11 @@ public class Enemy : MonoBehaviour
         // 如果目标不存在或敌人死亡，不跟随
         if (target == null || isDead) return;
 
-        bool wasFollowing = isFollowingPlayer;
+        // 计算与玩家的距离
+        float distanceToPlayer = Vector2.Distance(transform.position, target.position);
 
-        if (Vector2.Distance(transform.position, target.position) < followDistance)
+        // 更新跟随状态
+        if (distanceToPlayer < followDistance)
         {
             isFollowingPlayer = true;
 
@@ -337,4 +402,14 @@ public class Enemy : MonoBehaviour
     {
         return !isDead && currentHP > 0;
     }
+
+    void OnDestroy()
+    {
+        if (isFollowingPlayer)
+        {
+            chasingEnemiesCount = Mathf.Max(0, chasingEnemiesCount - 1);
+            UpdateBattleMusic();
+        }
+    }
+
 }
