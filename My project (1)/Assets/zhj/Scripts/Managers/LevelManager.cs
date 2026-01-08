@@ -5,6 +5,10 @@ using System.Collections.Generic;
 
 public class LevelManager : MonoBehaviour
 {
+    [Header("特殊等级事件")]
+    public UnityEvent<int> onSpecialLevelReached; // 参数：达到的特殊等级
+    [SerializeField] private int[] specialLevels = { 3, 20, 30, 50, 100 }; // 特殊等级数组
+
     [Header("配置引用")]
     [SerializeField] private LevelDataSO levelData;
     [SerializeField] private GrowthConfigSO growthConfig;
@@ -164,47 +168,76 @@ private void CreateDefaultLevelData()
     /// 升级
     /// </summary>
     public void LevelUp()
+{
+    if (levelData == null)
     {
-        if (levelData == null)
-        {
-            Debug.LogError("LevelData 未设置");
-            return;
-        }
-        
-        if (currentLevel >= levelData.maxLevel)
-        {
-            Debug.Log("已达到最大等级");
-            return;
-        }
-        
-        int previousLevel = currentLevel;
-        currentLevel++;
-        
-        // 获取等级信息
-        var levelInfo = levelData.GetLevelInfo(currentLevel);
-        
-        // 奖励技能点和属性点
-        int skillPointsReward = levelInfo.skillPointsReward;
-        int attributePointsReward = levelInfo.attributePointsReward;
-        
-        availableSkillPoints += skillPointsReward;
-        availableAttributePoints += attributePointsReward;
-        
-        // 自动属性增长
-        AutoGrowAttributes();
-        
-        // 触发事件
-        onLevelUp?.Invoke(currentLevel);
-        onLevelUpDetailed?.Invoke(currentLevel, skillPointsReward, attributePointsReward);
-        onSkillPointsChanged?.Invoke(availableSkillPoints);
-        onAttributePointsChanged?.Invoke(availableAttributePoints);
-        
-        Debug.Log($"升级到 {currentLevel} 级！获得 {skillPointsReward} 技能点，{attributePointsReward} 属性点");
-        
-        // 显示升级UI
-        ShowLevelUpNotification(currentLevel, skillPointsReward, attributePointsReward);
+        Debug.LogError("LevelData 未设置");
+        return;
     }
     
+    if (currentLevel >= levelData.maxLevel)
+    {
+        Debug.Log("已达到最大等级");
+        return;
+    }
+    
+    int previousLevel = currentLevel;
+    currentLevel++;
+    
+    // 获取等级信息
+    var levelInfo = levelData.GetLevelInfo(currentLevel);
+    
+    // 奖励技能点和属性点
+    int skillPointsReward = levelInfo.skillPointsReward;
+    int attributePointsReward = levelInfo.attributePointsReward;
+    
+    availableSkillPoints += skillPointsReward;
+    availableAttributePoints += attributePointsReward;
+    
+    // 自动属性增长
+    AutoGrowAttributes();
+    
+    // 触发事件
+    onLevelUp?.Invoke(currentLevel);
+    onLevelUpDetailed?.Invoke(currentLevel, skillPointsReward, attributePointsReward);
+    onSkillPointsChanged?.Invoke(availableSkillPoints);
+    onAttributePointsChanged?.Invoke(availableAttributePoints);
+    
+    Debug.Log($"升级到 {currentLevel} 级！获得 {skillPointsReward} 技能点，{attributePointsReward} 属性点");
+    
+    // 检查是否为特殊等级
+    CheckSpecialLevel(currentLevel);
+    
+    // 显示升级UI
+    ShowLevelUpNotification(currentLevel, skillPointsReward, attributePointsReward);
+}
+    // 添加特殊等级检查方法
+private void CheckSpecialLevel(int level)
+{
+    foreach (int specialLevel in specialLevels)
+    {
+        if (level == specialLevel)
+        {
+            onSpecialLevelReached?.Invoke(level);
+            Debug.Log($"<color=orange>恭喜！达到特殊等级 {level} 级！</color>");
+            break;
+        }
+    }
+}
+
+// 添加获取特殊等级文本的方法（用于UI显示）
+public string GetSpecialLevelMessage(int level)
+{
+    return level switch
+    {
+        10 => "恭喜！你已达到10级！\n解锁新的技能和能力！",
+        20 => "里程碑！达到20级！\n你已经成为一名经验丰富的冒险者！",
+        30 => "惊人！30级达成！\n你的力量正在觉醒！",
+        50 => "传奇！50级成就！\n你已经是传说中的英雄！",
+        100 => "神话！100级巅峰！\n你已成为不朽的传奇！",
+        _ => $"恭喜达到 {level} 级！"
+    };
+}
     /// <summary>
     /// 显示升级通知
     /// </summary>
