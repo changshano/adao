@@ -441,4 +441,7 @@ public class AudioManager : MonoBehaviour
 
     // 新增：设置战斗背景音乐
     public void SetBattleBackgroundMusic(AudioClip clip) => battleBackgroundMusic = clip;
+
+
+
 }

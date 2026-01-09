@@ -5,6 +5,10 @@ using UnityEngine.UI;
 
 public class PlayerAction : MonoBehaviour
 {
+    [Header("坠落死亡设置")]
+    public float deathYValue = -10f; // 低于这个Y值就会死亡
+    public bool enableFallDeath = true; // 是否启用坠落死亡
+
     [Header("移动设置")]
     public float playerMoveSpeed;
     public float playerJumpSpeed;
@@ -191,9 +195,19 @@ public class PlayerAction : MonoBehaviour
                 AudioManager.Instance.StopMoveSound();
             }
         }
-
+        CheckFallDeath();
     }
+    // 检查是否坠落死亡
+    void CheckFallDeath()
+    {
+        if (isDead || !enableFallDeath) return;
 
+        if (transform.position.y <= deathYValue)
+        {
+            Debug.Log($"玩家坠落至Y值: {transform.position.y}, 触发坠落死亡");
+            Die();
+        }
+    }
     //void PlayerMove()
     //{
     //    if (isDead) return;
